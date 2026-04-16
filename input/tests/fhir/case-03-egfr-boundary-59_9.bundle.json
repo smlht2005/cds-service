@@ -21,6 +21,58 @@
       "request": { "method": "PUT", "url": "Patient/patient-ckd-103" }
     },
     {
+      "fullUrl": "urn:uuid:cond-history-103",
+      "resource": {
+        "resourceType": "Condition",
+        "id": "cond-history-103",
+        "clinicalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+              "code": "inactive"
+            }
+          ]
+        },
+        "code": {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z87.898",
+              "display": "Personal history of other specified conditions"
+            }
+          ],
+          "text": "Non-AKI history (ICD-10) — for tri-state"
+        },
+        "subject": { "reference": "Patient/patient-ckd-103" }
+      },
+      "request": { "method": "PUT", "url": "Condition/cond-history-103" }
+    },
+    {
+      "fullUrl": "urn:uuid:fmh-103",
+      "resource": {
+        "resourceType": "FamilyMemberHistory",
+        "id": "fmh-103",
+        "status": "completed",
+        "patient": { "reference": "Patient/patient-ckd-103" },
+        "relationship": {
+          "coding": [
+            { "system": "http://terminology.hl7.org/CodeSystem/v3-RoleCode", "code": "SIS", "display": "sister" }
+          ]
+        },
+        "condition": [
+          {
+            "code": {
+              "coding": [
+                { "system": "http://snomed.info/sct", "code": "709044004", "display": "Chronic kidney disease" }
+              ],
+              "text": "CKD"
+            }
+          }
+        ]
+      },
+      "request": { "method": "PUT", "url": "FamilyMemberHistory/fmh-103" }
+    },
+    {
       "fullUrl": "urn:uuid:obs-egfr-103",
       "resource": {
         "resourceType": "Observation",

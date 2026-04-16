@@ -183,6 +183,31 @@
                }
             }
          }, {
+            "name" : "AllConditions",
+            "context" : "Patient",
+            "accessLevel" : "Public",
+            "annotation" : [ ],
+            "expression" : {
+               "type" : "Query",
+               "annotation" : [ ],
+               "source" : [ {
+                  "alias" : "C",
+                  "annotation" : [ ],
+                  "expression" : {
+                     "dataType" : "{http://hl7.org/fhir}Condition",
+                     "templateId" : "http://hl7.org/fhir/StructureDefinition/Condition",
+                     "type" : "Retrieve",
+                     "annotation" : [ ],
+                     "include" : [ ],
+                     "codeFilter" : [ ],
+                     "dateFilter" : [ ],
+                     "otherFilter" : [ ]
+                  }
+               } ],
+               "let" : [ ],
+               "relationship" : [ ]
+            }
+         }, {
             "name" : "AllObservations",
             "context" : "Patient",
             "accessLevel" : "Public",
@@ -1934,13 +1959,577 @@
                }
             }
          }, {
+            "name" : "HasAkiHistory",
+            "context" : "Patient",
+            "accessLevel" : "Public",
+            "annotation" : [ ],
+            "expression" : {
+               "type" : "If",
+               "annotation" : [ ],
+               "condition" : {
+                  "type" : "Not",
+                  "annotation" : [ ],
+                  "signature" : [ ],
+                  "operand" : {
+                     "type" : "Exists",
+                     "annotation" : [ ],
+                     "signature" : [ ],
+                     "operand" : {
+                        "type" : "Query",
+                        "annotation" : [ ],
+                        "source" : [ {
+                           "alias" : "C",
+                           "annotation" : [ ],
+                           "expression" : {
+                              "name" : "AllConditions",
+                              "type" : "ExpressionRef",
+                              "annotation" : [ ]
+                           }
+                        } ],
+                        "let" : [ ],
+                        "relationship" : [ ],
+                        "where" : {
+                           "type" : "And",
+                           "annotation" : [ ],
+                           "signature" : [ ],
+                           "operand" : [ {
+                              "type" : "Not",
+                              "annotation" : [ ],
+                              "signature" : [ ],
+                              "operand" : {
+                                 "type" : "IsNull",
+                                 "annotation" : [ ],
+                                 "signature" : [ ],
+                                 "operand" : {
+                                    "path" : "code",
+                                    "scope" : "C",
+                                    "type" : "Property",
+                                    "annotation" : [ ]
+                                 }
+                              }
+                           }, {
+                              "type" : "Exists",
+                              "annotation" : [ ],
+                              "signature" : [ ],
+                              "operand" : {
+                                 "type" : "Query",
+                                 "annotation" : [ ],
+                                 "source" : [ {
+                                    "alias" : "cd",
+                                    "annotation" : [ ],
+                                    "expression" : {
+                                       "path" : "coding",
+                                       "type" : "Property",
+                                       "annotation" : [ ],
+                                       "source" : {
+                                          "path" : "code",
+                                          "scope" : "C",
+                                          "type" : "Property",
+                                          "annotation" : [ ]
+                                       }
+                                    }
+                                 } ],
+                                 "let" : [ ],
+                                 "relationship" : [ ],
+                                 "where" : {
+                                    "type" : "And",
+                                    "annotation" : [ ],
+                                    "signature" : [ ],
+                                    "operand" : [ {
+                                       "type" : "Not",
+                                       "annotation" : [ ],
+                                       "signature" : [ ],
+                                       "operand" : {
+                                          "type" : "IsNull",
+                                          "annotation" : [ ],
+                                          "signature" : [ ],
+                                          "operand" : {
+                                             "path" : "system",
+                                             "scope" : "cd",
+                                             "type" : "Property",
+                                             "annotation" : [ ]
+                                          }
+                                       }
+                                    }, {
+                                       "type" : "Equal",
+                                       "annotation" : [ ],
+                                       "signature" : [ ],
+                                       "operand" : [ {
+                                          "path" : "value",
+                                          "type" : "Property",
+                                          "annotation" : [ ],
+                                          "source" : {
+                                             "path" : "system",
+                                             "scope" : "cd",
+                                             "type" : "Property",
+                                             "annotation" : [ ]
+                                          }
+                                       }, {
+                                          "valueType" : "{urn:hl7-org:elm-types:r1}String",
+                                          "value" : "http://hl7.org/fhir/sid/icd-10-cm",
+                                          "type" : "Literal",
+                                          "annotation" : [ ]
+                                       } ]
+                                    } ]
+                                 }
+                              }
+                           } ]
+                        }
+                     }
+                  }
+               },
+               "then" : {
+                  "asType" : "{urn:hl7-org:elm-types:r1}Boolean",
+                  "type" : "As",
+                  "annotation" : [ ],
+                  "signature" : [ ],
+                  "operand" : {
+                     "type" : "Null",
+                     "annotation" : [ ]
+                  }
+               },
+               "else" : {
+                  "type" : "Exists",
+                  "annotation" : [ ],
+                  "signature" : [ ],
+                  "operand" : {
+                     "type" : "Query",
+                     "annotation" : [ ],
+                     "source" : [ {
+                        "alias" : "C",
+                        "annotation" : [ ],
+                        "expression" : {
+                           "name" : "AllConditions",
+                           "type" : "ExpressionRef",
+                           "annotation" : [ ]
+                        }
+                     } ],
+                     "let" : [ ],
+                     "relationship" : [ ],
+                     "where" : {
+                        "type" : "And",
+                        "annotation" : [ ],
+                        "signature" : [ ],
+                        "operand" : [ {
+                           "type" : "Not",
+                           "annotation" : [ ],
+                           "signature" : [ ],
+                           "operand" : {
+                              "type" : "IsNull",
+                              "annotation" : [ ],
+                              "signature" : [ ],
+                              "operand" : {
+                                 "path" : "code",
+                                 "scope" : "C",
+                                 "type" : "Property",
+                                 "annotation" : [ ]
+                              }
+                           }
+                        }, {
+                           "type" : "Exists",
+                           "annotation" : [ ],
+                           "signature" : [ ],
+                           "operand" : {
+                              "type" : "Query",
+                              "annotation" : [ ],
+                              "source" : [ {
+                                 "alias" : "cd",
+                                 "annotation" : [ ],
+                                 "expression" : {
+                                    "path" : "coding",
+                                    "type" : "Property",
+                                    "annotation" : [ ],
+                                    "source" : {
+                                       "path" : "code",
+                                       "scope" : "C",
+                                       "type" : "Property",
+                                       "annotation" : [ ]
+                                    }
+                                 }
+                              } ],
+                              "let" : [ ],
+                              "relationship" : [ ],
+                              "where" : {
+                                 "type" : "And",
+                                 "annotation" : [ ],
+                                 "signature" : [ ],
+                                 "operand" : [ {
+                                    "type" : "And",
+                                    "annotation" : [ ],
+                                    "signature" : [ ],
+                                    "operand" : [ {
+                                       "type" : "Equal",
+                                       "annotation" : [ ],
+                                       "signature" : [ ],
+                                       "operand" : [ {
+                                          "path" : "value",
+                                          "type" : "Property",
+                                          "annotation" : [ ],
+                                          "source" : {
+                                             "path" : "system",
+                                             "scope" : "cd",
+                                             "type" : "Property",
+                                             "annotation" : [ ]
+                                          }
+                                       }, {
+                                          "valueType" : "{urn:hl7-org:elm-types:r1}String",
+                                          "value" : "http://hl7.org/fhir/sid/icd-10-cm",
+                                          "type" : "Literal",
+                                          "annotation" : [ ]
+                                       } ]
+                                    }, {
+                                       "type" : "Not",
+                                       "annotation" : [ ],
+                                       "signature" : [ ],
+                                       "operand" : {
+                                          "type" : "IsNull",
+                                          "annotation" : [ ],
+                                          "signature" : [ ],
+                                          "operand" : {
+                                             "path" : "code",
+                                             "scope" : "cd",
+                                             "type" : "Property",
+                                             "annotation" : [ ]
+                                          }
+                                       }
+                                    } ]
+                                 }, {
+                                    "type" : "StartsWith",
+                                    "annotation" : [ ],
+                                    "signature" : [ ],
+                                    "operand" : [ {
+                                       "path" : "value",
+                                       "type" : "Property",
+                                       "annotation" : [ ],
+                                       "source" : {
+                                          "path" : "code",
+                                          "scope" : "cd",
+                                          "type" : "Property",
+                                          "annotation" : [ ]
+                                       }
+                                    }, {
+                                       "valueType" : "{urn:hl7-org:elm-types:r1}String",
+                                       "value" : "N17",
+                                       "type" : "Literal",
+                                       "annotation" : [ ]
+                                    } ]
+                                 } ]
+                              }
+                           }
+                        } ]
+                     }
+                  }
+               }
+            }
+         }, {
+            "name" : "HasFamilyHistoryOfCKD",
+            "context" : "Patient",
+            "accessLevel" : "Public",
+            "annotation" : [ ],
+            "expression" : {
+               "type" : "If",
+               "annotation" : [ ],
+               "condition" : {
+                  "type" : "Not",
+                  "annotation" : [ ],
+                  "signature" : [ ],
+                  "operand" : {
+                     "type" : "Exists",
+                     "annotation" : [ ],
+                     "signature" : [ ],
+                     "operand" : {
+                        "type" : "Query",
+                        "annotation" : [ ],
+                        "source" : [ {
+                           "alias" : "F",
+                           "annotation" : [ ],
+                           "expression" : {
+                              "dataType" : "{http://hl7.org/fhir}FamilyMemberHistory",
+                              "templateId" : "http://hl7.org/fhir/StructureDefinition/FamilyMemberHistory",
+                              "type" : "Retrieve",
+                              "annotation" : [ ],
+                              "include" : [ ],
+                              "codeFilter" : [ ],
+                              "dateFilter" : [ ],
+                              "otherFilter" : [ ]
+                           }
+                        } ],
+                        "let" : [ ],
+                        "relationship" : [ ]
+                     }
+                  }
+               },
+               "then" : {
+                  "asType" : "{urn:hl7-org:elm-types:r1}Boolean",
+                  "type" : "As",
+                  "annotation" : [ ],
+                  "signature" : [ ],
+                  "operand" : {
+                     "type" : "Null",
+                     "annotation" : [ ]
+                  }
+               },
+               "else" : {
+                  "type" : "Exists",
+                  "annotation" : [ ],
+                  "signature" : [ ],
+                  "operand" : {
+                     "type" : "Query",
+                     "annotation" : [ ],
+                     "source" : [ {
+                        "alias" : "F",
+                        "annotation" : [ ],
+                        "expression" : {
+                           "dataType" : "{http://hl7.org/fhir}FamilyMemberHistory",
+                           "templateId" : "http://hl7.org/fhir/StructureDefinition/FamilyMemberHistory",
+                           "type" : "Retrieve",
+                           "annotation" : [ ],
+                           "include" : [ ],
+                           "codeFilter" : [ ],
+                           "dateFilter" : [ ],
+                           "otherFilter" : [ ]
+                        }
+                     } ],
+                     "let" : [ ],
+                     "relationship" : [ ],
+                     "where" : {
+                        "type" : "Exists",
+                        "annotation" : [ ],
+                        "signature" : [ ],
+                        "operand" : {
+                           "type" : "Query",
+                           "annotation" : [ ],
+                           "source" : [ {
+                              "alias" : "fc",
+                              "annotation" : [ ],
+                              "expression" : {
+                                 "path" : "condition",
+                                 "scope" : "F",
+                                 "type" : "Property",
+                                 "annotation" : [ ]
+                              }
+                           } ],
+                           "let" : [ ],
+                           "relationship" : [ ],
+                           "where" : {
+                              "type" : "And",
+                              "annotation" : [ ],
+                              "signature" : [ ],
+                              "operand" : [ {
+                                 "type" : "Not",
+                                 "annotation" : [ ],
+                                 "signature" : [ ],
+                                 "operand" : {
+                                    "type" : "IsNull",
+                                    "annotation" : [ ],
+                                    "signature" : [ ],
+                                    "operand" : {
+                                       "path" : "code",
+                                       "scope" : "fc",
+                                       "type" : "Property",
+                                       "annotation" : [ ]
+                                    }
+                                 }
+                              }, {
+                                 "type" : "Exists",
+                                 "annotation" : [ ],
+                                 "signature" : [ ],
+                                 "operand" : {
+                                    "type" : "Query",
+                                    "annotation" : [ ],
+                                    "source" : [ {
+                                       "alias" : "cd",
+                                       "annotation" : [ ],
+                                       "expression" : {
+                                          "path" : "coding",
+                                          "type" : "Property",
+                                          "annotation" : [ ],
+                                          "source" : {
+                                             "path" : "code",
+                                             "scope" : "fc",
+                                             "type" : "Property",
+                                             "annotation" : [ ]
+                                          }
+                                       }
+                                    } ],
+                                    "let" : [ ],
+                                    "relationship" : [ ],
+                                    "where" : {
+                                       "type" : "And",
+                                       "annotation" : [ ],
+                                       "signature" : [ ],
+                                       "operand" : [ {
+                                          "type" : "And",
+                                          "annotation" : [ ],
+                                          "signature" : [ ],
+                                          "operand" : [ {
+                                             "type" : "And",
+                                             "annotation" : [ ],
+                                             "signature" : [ ],
+                                             "operand" : [ {
+                                                "type" : "Not",
+                                                "annotation" : [ ],
+                                                "signature" : [ ],
+                                                "operand" : {
+                                                   "type" : "IsNull",
+                                                   "annotation" : [ ],
+                                                   "signature" : [ ],
+                                                   "operand" : {
+                                                      "path" : "system",
+                                                      "scope" : "cd",
+                                                      "type" : "Property",
+                                                      "annotation" : [ ]
+                                                   }
+                                                }
+                                             }, {
+                                                "type" : "Equal",
+                                                "annotation" : [ ],
+                                                "signature" : [ ],
+                                                "operand" : [ {
+                                                   "path" : "value",
+                                                   "type" : "Property",
+                                                   "annotation" : [ ],
+                                                   "source" : {
+                                                      "path" : "system",
+                                                      "scope" : "cd",
+                                                      "type" : "Property",
+                                                      "annotation" : [ ]
+                                                   }
+                                                }, {
+                                                   "valueType" : "{urn:hl7-org:elm-types:r1}String",
+                                                   "value" : "http://snomed.info/sct",
+                                                   "type" : "Literal",
+                                                   "annotation" : [ ]
+                                                } ]
+                                             } ]
+                                          }, {
+                                             "type" : "Not",
+                                             "annotation" : [ ],
+                                             "signature" : [ ],
+                                             "operand" : {
+                                                "type" : "IsNull",
+                                                "annotation" : [ ],
+                                                "signature" : [ ],
+                                                "operand" : {
+                                                   "path" : "code",
+                                                   "scope" : "cd",
+                                                   "type" : "Property",
+                                                   "annotation" : [ ]
+                                                }
+                                             }
+                                          } ]
+                                       }, {
+                                          "type" : "Equal",
+                                          "annotation" : [ ],
+                                          "signature" : [ ],
+                                          "operand" : [ {
+                                             "path" : "value",
+                                             "type" : "Property",
+                                             "annotation" : [ ],
+                                             "source" : {
+                                                "path" : "code",
+                                                "scope" : "cd",
+                                                "type" : "Property",
+                                                "annotation" : [ ]
+                                             }
+                                          }, {
+                                             "valueType" : "{urn:hl7-org:elm-types:r1}String",
+                                             "value" : "709044004",
+                                             "type" : "Literal",
+                                             "annotation" : [ ]
+                                          } ]
+                                       } ]
+                                    }
+                                 }
+                              } ]
+                           }
+                        }
+                     }
+                  }
+               }
+            }
+         }, {
             "name" : "FamilyHistoryOrAKI",
             "context" : "Patient",
             "accessLevel" : "Public",
             "annotation" : [ ],
             "expression" : {
-               "type" : "Null",
-               "annotation" : [ ]
+               "type" : "If",
+               "annotation" : [ ],
+               "condition" : {
+                  "type" : "Or",
+                  "annotation" : [ ],
+                  "signature" : [ ],
+                  "operand" : [ {
+                     "type" : "IsTrue",
+                     "annotation" : [ ],
+                     "signature" : [ ],
+                     "operand" : {
+                        "name" : "HasAkiHistory",
+                        "type" : "ExpressionRef",
+                        "annotation" : [ ]
+                     }
+                  }, {
+                     "type" : "IsTrue",
+                     "annotation" : [ ],
+                     "signature" : [ ],
+                     "operand" : {
+                        "name" : "HasFamilyHistoryOfCKD",
+                        "type" : "ExpressionRef",
+                        "annotation" : [ ]
+                     }
+                  } ]
+               },
+               "then" : {
+                  "valueType" : "{urn:hl7-org:elm-types:r1}Boolean",
+                  "value" : "true",
+                  "type" : "Literal",
+                  "annotation" : [ ]
+               },
+               "else" : {
+                  "type" : "If",
+                  "annotation" : [ ],
+                  "condition" : {
+                     "type" : "And",
+                     "annotation" : [ ],
+                     "signature" : [ ],
+                     "operand" : [ {
+                        "type" : "IsFalse",
+                        "annotation" : [ ],
+                        "signature" : [ ],
+                        "operand" : {
+                           "name" : "HasAkiHistory",
+                           "type" : "ExpressionRef",
+                           "annotation" : [ ]
+                        }
+                     }, {
+                        "type" : "IsFalse",
+                        "annotation" : [ ],
+                        "signature" : [ ],
+                        "operand" : {
+                           "name" : "HasFamilyHistoryOfCKD",
+                           "type" : "ExpressionRef",
+                           "annotation" : [ ]
+                        }
+                     } ]
+                  },
+                  "then" : {
+                     "valueType" : "{urn:hl7-org:elm-types:r1}Boolean",
+                     "value" : "false",
+                     "type" : "Literal",
+                     "annotation" : [ ]
+                  },
+                  "else" : {
+                     "asType" : "{urn:hl7-org:elm-types:r1}Boolean",
+                     "type" : "As",
+                     "annotation" : [ ],
+                     "signature" : [ ],
+                     "operand" : {
+                        "type" : "Null",
+                        "annotation" : [ ]
+                     }
+                  }
+               }
             }
          }, {
             "name" : "MostRecentEgfrObservation",

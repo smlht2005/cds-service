@@ -1,3 +1,9 @@
+<!--
+更新時間：2026-04-16 16:46
+作者：CDS Service
+摘要：README 補上 CQL→ELM 編譯指令（Maven + cql-to-elm-cli）與產物路徑，便於快速上手
+-->
+
 # CDS Service
 
 以 **Node.js + Fastify + TypeScript** 實作的 **HL7 CDS Hooks** 服務：對接 **FHIR R4**，提供 **Discovery** 與 **`patient-view` Hook**，回傳臨床決策支援 **Cards**（含 **RuleEngine** 延伸資訊）。適合與 HAPI FHIR 或院內 FHIR 整合測試。
@@ -61,6 +67,25 @@ npm run dev
 | `npm start` | 啟動 CDS Service |
 | `npm run build` | 編譯至 `dist/` |
 | `npm run test:fhir` | 驗證 FHIR 連線與關鍵資源讀取 |
+
+---
+
+## CQL → ELM（如何編譯）
+
+本專案以 **`cql-execution`** 執行 **ELM JSON**，因此 `.cql` 需先編譯為 `elm/*.json`（詳細說明見 [`docs/cql_elm.md`](docs/cql_elm.md)）。
+
+### 方式：Maven＋`cql-to-elm-cli`（本專案已附 helper POM）
+
+先安裝 **Java** 與 **Maven**，再於專案根目錄執行：
+
+```powershell
+cd "c:\Development\HISCore\CDS Service"
+mvn -f scripts/cql-compile-pom.xml exec:java "-Dexec.args=--input cql/EGFR_Check.cql --output elm/EGFR_Check.json --format JSON"
+```
+
+- **輸入**：`cql/EGFR_Check.cql`
+- **輸出**：`elm/EGFR_Check.json`（ELM JSON）
+- 其他規則（如 `CKD_Risk.cql`、`CKD_Comprehensive.cql`）同理：修改 `--input` / `--output` 即可
 
 ---
 

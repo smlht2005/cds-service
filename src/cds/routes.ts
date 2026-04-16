@@ -1,4 +1,8 @@
 /*
+ * 更新時間：2026-04-16 14:12
+ * 作者：CDS Service
+ * 摘要：新增 ckd-comprehensive：Discovery 註冊 + POST /cds-services/ckd-comprehensive
+ *
  * 更新時間：2026-04-15 09:08
  * 作者：CDS Service
  * 摘要：步驟二 — Discovery 合併 egfr-check + ckd-risk；POST /cds-services/egfr-check 與 ckd-risk 共用 handler
@@ -9,8 +13,9 @@
  */
 import type { FastifyInstance } from 'fastify';
 import { egfrCheckService, getDiscoveryResponse } from './cdsServices.js';
-import { ckdRiskService } from './ckdServiceDefinition.js';
+import { ckdComprehensiveService, ckdRiskService } from './ckdServiceDefinition.js';
 import { handleCkdRiskHook, type CdsHooksRequest } from './ckdHookHandler.js';
+import { handleCkdComprehensiveHook } from './ckdComprehensiveHookHandler.js';
 import { handleEgfrCheckHook } from './egfrCheckHookHandler.js';
 
 async function postCdsHook(
@@ -40,7 +45,7 @@ async function postCdsHook(
 
 export async function registerCdsRoutes(app: FastifyInstance): Promise<void> {
   app.get('/cds-services', async () =>
-    getDiscoveryResponse([egfrCheckService, ckdRiskService]),
+    getDiscoveryResponse([egfrCheckService, ckdRiskService, ckdComprehensiveService]),
   );
 
   app.post<{ Body: CdsHooksRequest }>('/cds-services/egfr-check', async (request, reply) =>
@@ -49,5 +54,11 @@ export async function registerCdsRoutes(app: FastifyInstance): Promise<void> {
 
   app.post<{ Body: CdsHooksRequest }>('/cds-services/ckd-risk', async (request, reply) =>
     postCdsHook(request, reply, 'ckd-risk', handleCkdRiskHook),
+  );
+
+  app.post<{ Body: CdsHooksRequest }>(
+    '/cds-services/ckd-comprehensive',
+    async (request, reply) =>
+      postCdsHook(request, reply, 'ckd-comprehensive', handleCkdComprehensiveHook),
   );
 }

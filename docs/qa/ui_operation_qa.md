@@ -1,4 +1,12 @@
 <!--
+更新時間：2026-04-16 14:59
+作者：CDS Service
+摘要：文件同步：ckd-risk Prefetch keys 新增 conditionsAll + familyHistory（支援 AKI N17* 與家族史 CKD）
+
+更新時間：2026-04-16 14:15
+作者：CDS Service
+摘要：文件同步：UI 範圍補上 ckd-comprehensive（第三服務）與其 Prefetch keys（含 latestEgfr）
+
 更新時間：2026-04-16 13:16
 作者：CDS Service
 摘要：第 6 節新增手動驗證案例 UI-CKD-02（ckd-risk Prefetch OFF／ON 對照 hybrid）
@@ -29,7 +37,7 @@
 
 本文件為 **[`docs/CDS_Hook_UI_Operation.md`](../CDS_Hook_UI_Operation.md)** 的 **QA 補充**：以問答與對照表形式記錄 **前端 UI**（`frontend/`）與 **CDS Service／FHIR** 的預期行為、驗證步驟與常見誤判，供測試與教學重現。
 
-**範圍**：`egfr-check`／`ckd-risk`、`Prefetch from FHIR (egfr-check)` 開關、Request／Response、RuleEngine、錯誤訊息。  
+**範圍**：`egfr-check`／`ckd-risk`／`ckd-comprehensive`、`Prefetch from FHIR（依服務切換）` 開關、Request／Response、RuleEngine、錯誤訊息。  
 **Tooltip**：主要控制項與區塊標題旁 **ⓘ** 或將游標移至 **RuleEngine**／**Discovery 鍵** 上，可讀取繁中說明（文案集中於 [`frontend/src/copy/zhTwUi.ts`](../../frontend/src/copy/zhTwUi.ts)）。  
 **不包含**：CQL／ELM／UCUM 編譯問題（見 [`README.md`](README.md) 主文件）。
 
@@ -50,10 +58,10 @@
 
 | 控制項 | 行為摘要 | QA 注意 |
 |--------|----------|---------|
-| **CDS 服務** | `egfr-check`：eGFR 複查規則（與 `ckd-risk` 分離）。`ckd-risk`：CKD risk v1（**預設 hybrid**：可不帶 prefetch）。 | 切換服務若 **自動呼叫（patient-view）** 為開，會自動重送 Hook。 |
+| **CDS 服務** | `egfr-check`：eGFR 複查規則。`ckd-risk`：CKD risk v1（**預設 hybrid**）。`ckd-comprehensive`：CKD 綜合規則（CPG + risk + testing；**預設 hybrid**）。 | 切換服務若 **自動呼叫（patient-view）** 為開，會自動重送 Hook。 |
 | **Patient ID** | 建議清單或手動輸入（freeSolo）。 | ID 須與 FHIR 內存在之 `Patient.id` 一致，否則 FHIR 404 → Prefetch 階段或後端錯誤。 |
 | **自動呼叫（patient-view）** | 開：依賴變更時自動 `runHook`。關：僅 **立即呼叫 Hook** 觸發。 | 關閉可避免每次改參數就重送，方便比對 Request。 |
-| **Prefetch from FHIR（依服務切換）** | 單一開關：依目前 service 決定組哪些 prefetch。 | `egfr-check`：patient/latestEgfr/latestCreatinine；`ckd-risk`：patient/conditions/observations。 |
+| **Prefetch from FHIR（依服務切換）** | 單一開關：依目前 service 決定組哪些 prefetch。 | `egfr-check`：patient/latestEgfr/latestCreatinine；`ckd-risk`：patient/conditions/conditionsAll/observations/familyHistory；`ckd-comprehensive`：patient/conditions/observations/latestEgfr。 |
 | **重新載入 Discovery** | `GET /cds-services`，更新左下 Discovery JSON。 | 驗證 `href`、`prefetch` 範本是否與後端一致。 |
 | **立即呼叫 Hook** | 手動送 Hook。 | FHIR 資料更新後建議按一次，避免只看舊 Response。 |
 | **Discovery 鍵 Chip** | 僅在 `egfr-check` 且 Prefetch 開啟時顯示（長文案）。 | 表示本次請求將帶 `patient`／`latestEgfr`／`latestCreatinine`。 |
@@ -76,7 +84,8 @@
 #### 3.1.1 Prefetch 內容（依 service）
 
 - **egfr-check（ON）**：`patient`、`latestEgfr`、`latestCreatinine`
-- **ckd-risk（ON）**：`patient`、`conditions`、`observations`
+- **ckd-risk（ON）**：`patient`、`conditions`、`conditionsAll`、`observations`、`familyHistory`
+- **ckd-comprehensive（ON）**：`patient`、`conditions`、`observations`、`latestEgfr`
 
 ### 3.2 視覺／除錯對照（與截圖驗證一致）
 

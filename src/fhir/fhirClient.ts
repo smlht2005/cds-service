@@ -3,6 +3,10 @@
  * 作者：CDS Service
  * 摘要：ckd-risk hybrid：新增 Condition active 與 CKD risk Observation（多 code + 365 天）搜尋 API
  *
+ * 更新時間：2026-04-16 14:59
+ * 作者：CDS Service
+ * 摘要：ckd-risk 擴充風險因子資料來源：新增 searchAllConditions（既往 AKI）與 searchFamilyMemberHistory（家族史）
+ *
  * 更新時間：2026-04-14 16:28
  * 作者：CDS Service
  * 摘要：修正 getLatestEGFR/Creatinine 回傳型別與 TS 編譯
@@ -153,6 +157,44 @@ export async function searchActiveConditions(patientId: string): Promise<Record<
       params: {
         patient: patientId,
         'clinical-status': 'active',
+        _count: 200,
+      },
+    });
+    const bundle = response.data as { entry?: Array<{ resource?: Record<string, unknown> }> };
+    const entry = Array.isArray(bundle.entry) ? bundle.entry : [];
+    return entry.map((e) => e.resource).filter(Boolean) as Record<string, unknown>[];
+  } catch (error) {
+    handleFhirError(error);
+  }
+}
+
+/**
+ * 查詢 Conditions（不限制 clinical-status；用於「既往史」如 AKI N17*）
+ */
+export async function searchAllConditions(patientId: string): Promise<Record<string, unknown>[]> {
+  try {
+    const response = await fhirInstance.get('/Condition', {
+      params: {
+        patient: patientId,
+        _count: 200,
+      },
+    });
+    const bundle = response.data as { entry?: Array<{ resource?: Record<string, unknown> }> };
+    const entry = Array.isArray(bundle.entry) ? bundle.entry : [];
+    return entry.map((e) => e.resource).filter(Boolean) as Record<string, unknown>[];
+  } catch (error) {
+    handleFhirError(error);
+  }
+}
+
+/**
+ * 查詢 FamilyMemberHistory（家族史；用於 CKD 風險因子）
+ */
+export async function searchFamilyMemberHistory(patientId: string): Promise<Record<string, unknown>[]> {
+  try {
+    const response = await fhirInstance.get('/FamilyMemberHistory', {
+      params: {
+        patient: patientId,
         _count: 200,
       },
     });

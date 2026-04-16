@@ -36,7 +36,10 @@ export async function fhirGet(resourcePath: string): Promise<Record<string, unkn
   throw err;
 }
 
-export async function fhirSearch(resourceType: 'Condition' | 'Observation', query: string): Promise<Array<Record<string, unknown>>> {
+export async function fhirSearch(
+  resourceType: 'Condition' | 'Observation' | 'FamilyMemberHistory',
+  query: string,
+): Promise<Array<Record<string, unknown>>> {
   const { status, statusText, json, rawText } = await fetchJson(`/fhir/${resourceType}?${query}`, {
     method: 'GET',
     headers: { Accept: 'application/fhir+json' },

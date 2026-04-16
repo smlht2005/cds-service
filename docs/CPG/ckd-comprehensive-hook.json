@@ -1,0 +1,13 @@
+{
+  "id": "ckd-comprehensive",
+  "hook": "patient-view",
+  "title": "CKD 綜合風險評估服務",
+  "description": "整合 CKD_Risk 風險因子/缺檢偵測，並加入 NKF CPG 規則：高風險輪廓、年度 uACR、eGFR < 30 轉介、嚴重缺檢與綜合分數（hybrid：prefetch 可省略）。",
+  "prefetch": {
+    "patient": "Patient/{{context.patientId}}",
+    "conditions": "Condition?patient={{context.patientId}}&clinical-status=active",
+    "observations": "Observation?patient={{context.patientId}}&code=62238-1,33914-3,9318-7,32294-1,39156-5&date=ge{{today-365}}",
+    "latestEgfr": "Observation?patient={{context.patientId}}&code=62238-1,33914-3&_sort=-date&_count=1"
+  }
+}
+

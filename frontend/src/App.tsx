@@ -1,4 +1,12 @@
 /*
+ * 更新時間：2026-04-16 15:21
+ * 作者：CDS Service
+ * 摘要：Patient 下拉清單新增 patient-ckd-107（用於驗證 ckd-risk 家族史/AKI warning）
+ *
+ * 更新時間：2026-04-16 14:12
+ * 作者：CDS Service
+ * 摘要：前端新增 ckd-comprehensive（第三服務）：ServiceId/選單/說明文案/Prefetch 組裝（含 latestEgfr）
+ *
  * 更新時間：2026-04-16 10:15
  * 作者：CDS Service
  * 摘要：標題列應用說明（zh-TW）＋主要欄位 Tooltip；copy/zhTwUi 集中文案
@@ -87,7 +95,7 @@ function formatFhirError(e: unknown): string {
   return String(e);
 }
 
-type ServiceId = 'egfr-check' | 'ckd-risk';
+type ServiceId = 'egfr-check' | 'ckd-risk' | 'ckd-comprehensive';
 
 function getRuleEngine(cards: CdsCard[]): string | undefined {
   const ext = cards?.[0]?.extension?.find((e) => e.url === 'urn:cds-service:rule-engine');
@@ -128,7 +136,14 @@ function EmptyCardsPlaceholder(props: { message: string }) {
 
 export default function App() {
   const patientOptions = useMemo(
-    () => ['patient-ckd-101', 'patient-ckd-102', 'patient-ckd-103', 'patient-ckd-104', 'patient-ckd-105'],
+    () => [
+      'patient-ckd-101',
+      'patient-ckd-102',
+      'patient-ckd-103',
+      'patient-ckd-104',
+      'patient-ckd-105',
+      'patient-ckd-107',
+    ],
     [],
   );
 
@@ -182,17 +197,32 @@ export default function App() {
     };
 
     try {
-      if (serviceId === 'ckd-risk' && prefetchFromFhirEnabled) {
+      if ((serviceId === 'ckd-risk' || serviceId === 'ckd-comprehensive') && prefetchFromFhirEnabled) {
         const patient = await fhirGet(`Patient/${encodeURIComponent(patientId)}`);
         const conditions = await fhirSearch(
           'Condition',
           `patient=${encodeURIComponent(patientId)}&clinical-status=active`,
+        );
+        const conditionsAll = await fhirSearch(
+          'Condition',
+          `patient=${encodeURIComponent(patientId)}`,
         );
         const codes = ['62238-1', '33914-3', '9318-7', '32294-1', '39156-5'].join(',');
         const observations = await fhirSearch(
           'Observation',
           `patient=${encodeURIComponent(patientId)}&code=${encodeURIComponent(codes)}`,
         );
+        const familyHistory = await fhirSearch(
+          'FamilyMemberHistory',
+          `patient=${encodeURIComponent(patientId)}`,
+        );
+        const latestEgfr =
+          serviceId === 'ckd-comprehensive'
+            ? await fhirSearch(
+                'Observation',
+                `patient=${encodeURIComponent(patientId)}&code=62238-1,33914-3&_sort=-date&_count=1`,
+              )
+            : [];
 
         req.prefetch = {
           patient,
@@ -202,12 +232,27 @@ export default function App() {
             total: conditions.length,
             entry: conditions.map((r) => ({ resource: r })),
           },
+          conditionsAll: {
+            resourceType: 'Bundle',
+            type: 'searchset',
+            total: conditionsAll.length,
+            entry: conditionsAll.map((r) => ({ resource: r })),
+          },
           observations: {
             resourceType: 'Bundle',
             type: 'searchset',
             total: observations.length,
             entry: observations.map((r) => ({ resource: r })),
           },
+          familyHistory: {
+            resourceType: 'Bundle',
+            type: 'searchset',
+            total: familyHistory.length,
+            entry: familyHistory.map((r) => ({ resource: r })),
+          },
+          ...(serviceId === 'ckd-comprehensive'
+            ? { latestEgfr: bundleFromResources(latestEgfr) }
+            : {}),
         };
       } else if (serviceId === 'egfr-check' && prefetchFromFhirEnabled) {
         const patient = await fhirGet(`Patient/${encodeURIComponent(patientId)}`);
@@ -393,11 +438,16 @@ export default function App() {
                       >
                         <MenuItem value="egfr-check">egfr-check</MenuItem>
                         <MenuItem value="ckd-risk">ckd-risk</MenuItem>
+                        <MenuItem value="ckd-comprehensive">ckd-comprehensive</MenuItem>
                       </Select>
                     </FormControl>
                   </Tooltip>
                   <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.75, lineHeight: 1.6 }}>
-                    {serviceId === 'egfr-check' ? TT.serviceExplainEgfr : TT.serviceExplainCkd}
+                    {serviceId === 'egfr-check'
+                      ? TT.serviceExplainEgfr
+                      : serviceId === 'ckd-risk'
+                        ? TT.serviceExplainCkd
+                        : TT.serviceExplainCkdComprehensive}
                   </Typography>
                 </Grid>
                 <Grid size={{ xs: 12, sm: 6, md: 4 }}>
@@ -486,7 +536,20 @@ export default function App() {
                     <Chip
                       sx={{ mt: 2, cursor: 'help' }}
                       size="small"
-                      label="將帶入 Discovery 鍵：patient · conditions · observations"
+                      label="將帶入 Discovery 鍵：patient · conditions · conditionsAll · observations · familyHistory"
+                      variant="outlined"
+                      color="primary"
+                    />
+                  </span>
+                </Tooltip>
+              ) : null}
+              {serviceId === 'ckd-comprehensive' && prefetchFromFhirEnabled ? (
+                <Tooltip title={TT.discoveryKeysChipCkdComprehensive} arrow placement="top" slotProps={tooltipSlotProps}>
+                  <span>
+                    <Chip
+                      sx={{ mt: 2, cursor: 'help' }}
+                      size="small"
+                      label="將帶入 Discovery 鍵：patient · conditions · observations · latestEgfr"
                       variant="outlined"
                       color="primary"
                     />

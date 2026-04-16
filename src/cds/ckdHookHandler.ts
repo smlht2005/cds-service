@@ -1,7 +1,15 @@
 /*
+ * 更新時間：2026-04-16 16:44
+ * 作者：CDS Service
+ * 摘要：補強 handleCkdRiskHook 可讀性註解（prefetch/hybrid 合併策略、USE_ELM 分支與 fallback；不影響行為）
+ *
  * 更新時間：2026-04-16 10:08
  * 作者：CDS Service
  * 摘要：ckd-risk v1 改為預設 hybrid：prefetch 優先；缺少則伺服端向 FHIR 取 Patient/Condition/Observation 補齊
+ *
+ * 更新時間：2026-04-16 14:59
+ * 作者：CDS Service
+ * 摘要：ckd-risk 擴充風險因子：支援 AKI（ICD-10 N17*）與家族史 CKD（FamilyMemberHistory + SNOMED 709044004）；prefetch/hybrid 補齊 conditionsAll + familyHistory
  *
  * 更新時間：2026-04-15 17:46
  * 作者：CDS Service
@@ -32,7 +40,13 @@
  * 摘要：POST /cds-services/ckd-risk — 解析 prefetch、fallback FHIR、回傳 cards
  */
 import { evaluateCkdRiskWithElm, type CkdRiskPrefetchInput, type CkdRiskElmResult } from '../cql/ckdRiskElmExecutor.js';
-import { getPatient, searchActiveConditions, searchObservationsForCkdRisk } from '../fhir/fhirClient.js';
+import {
+  getPatient,
+  searchActiveConditions,
+  searchAllConditions,
+  searchFamilyMemberHistory,
+  searchObservationsForCkdRisk,
+} from '../fhir/fhirClient.js';
 import { buildCkdRiskCards } from './ckdRiskCardBuilder.js';
 
 /** CDS Hooks 請求（精簡，僅處理本 hook 所需欄位） */
@@ -84,8 +98,24 @@ function stripPatientPrefix(id: string): string {
   return id;
 }
 
+function dedupeByResourceTypeAndId(items: Array<Record<string, unknown>>): Array<Record<string, unknown>> {
+  const seen = new Set<string>();
+  const out: Array<Record<string, unknown>> = [];
+  for (const r of items) {
+    const rt = typeof (r as any)?.resourceType === 'string' ? String((r as any).resourceType) : '';
+    const id = typeof (r as any)?.id === 'string' ? String((r as any).id) : '';
+    const key = `${rt}/${id}`;
+    if (rt && id) {
+      if (seen.has(key)) continue;
+      seen.add(key);
+    }
+    out.push(r);
+  }
+  return out;
+}
+
 function evaluateCkdRiskWithTs(input: CkdRiskPrefetchInput): CkdRiskElmResult {
-  const { patient, conditions, observations } = input;
+  const { patient, conditions, observations, familyHistories } = input;
 
   const hasAnyCondCoding = (systems: string[]) =>
     conditions.some((c) =>
@@ -207,13 +237,50 @@ function evaluateCkdRiskWithTs(input: CkdRiskPrefetchInput): CkdRiskElmResult {
   const MissingeGFR = !egfrObs;
   const MissinguACR = !uacrObs;
 
+  const hasIcd10Condition = hasAnyCondCoding(['http://hl7.org/fhir/sid/icd-10-cm']);
+  const HasAkiHistory = !hasIcd10Condition
+    ? null
+    : condMatch(
+        (cd: any) =>
+          cd?.system === 'http://hl7.org/fhir/sid/icd-10-cm' &&
+          typeof cd?.code === 'string' &&
+          cd.code.startsWith('N17'),
+      );
+
+  const hasAnyFamilyHistory = Array.isArray(familyHistories) && familyHistories.length > 0;
+  const HasFamilyHistoryOfCKD = !hasAnyFamilyHistory
+    ? null
+    : familyHistories.some((f) => {
+        const cond = (f as any)?.condition;
+        if (!Array.isArray(cond)) return false;
+        return cond.some((fc: any) => {
+          const coding = fc?.code?.coding;
+          if (!Array.isArray(coding)) return false;
+          return coding.some(
+            (cd: any) =>
+              cd?.system === 'http://snomed.info/sct' &&
+              typeof cd?.code === 'string' &&
+              cd.code === '709044004',
+          );
+        });
+      });
+
+  const FamilyHistoryOrAKI =
+    HasAkiHistory === true || HasFamilyHistoryOfCKD === true
+      ? true
+      : HasAkiHistory === false && HasFamilyHistoryOfCKD === false
+        ? false
+        : null;
+
   return {
     AgeOver60,
     HasDiabetes,
     HasHypertension,
     HasHeartDisease,
     HasObesity,
-    FamilyHistoryOrAKI: null,
+    HasAkiHistory,
+    HasFamilyHistoryOfCKD,
+    FamilyHistoryOrAKI,
     MostRecentEgfrValue,
     MostRecentEgfrUnit,
     MostRecentUacrValue,
@@ -233,6 +300,7 @@ function evaluateCkdRiskWithTs(input: CkdRiskPrefetchInput): CkdRiskElmResult {
  * 處理 ckd-risk v1：預設 hybrid（prefetch 優先；缺少則伺服端向 FHIR 取資料補齊）。
  */
 export async function handleCkdRiskHook(body: CdsHooksRequest): Promise<CdsHooksResponse> {
+  // 1) 取得 patientId（CDS Hooks context 可能是 "Patient/{id}" 或 "{id}"）
   const rawId = body.context?.patientId;
   if (!rawId) {
     return {
@@ -248,33 +316,50 @@ export async function handleCkdRiskHook(body: CdsHooksRequest): Promise<CdsHooks
 
   const patientId = stripPatientPrefix(rawId);
 
+  // 2) Prefetch（hybrid）：優先使用 request.prefetch；缺少時才向 FHIR 補齊
+  //    ckd-risk v1.1 除了 conditions/observations，也支援：
+  //    - conditionsAll：包含 inactive condition（用於 AKI 病史）
+  //    - familyHistory：FamilyMemberHistory（用於 CKD 家族史）
   const pf = body.prefetch ?? {};
   const patientList = extractBundleResources(pf.patient, 'Patient');
   const pfPatient = patientList[0] ?? null;
   const pfConditions = extractBundleResources(pf.conditions, 'Condition');
+  const pfConditionsAll = extractBundleResources((pf as any).conditionsAll, 'Condition');
   const pfObservations = extractBundleResources(pf.observations, 'Observation');
+  const pfFamilyHistory = extractBundleResources((pf as any).familyHistory, 'FamilyMemberHistory');
 
-  // hybrid: prefer prefetch, but allow server-side fetch when missing
+  // 3) hybrid 取數：prefetch 有就用，沒有才打 FHIR
   const patient = pfPatient ?? (await getPatient(patientId));
-  const conditions = pf.conditions ? pfConditions : await searchActiveConditions(patientId);
+  const conditions = dedupeByResourceTypeAndId(
+    pf.conditions || (pf as any).conditionsAll
+      ? [...pfConditions, ...pfConditionsAll]
+      : [
+          ...(await searchActiveConditions(patientId)),
+          ...(await searchAllConditions(patientId)),
+        ],
+  );
   const observations = pf.observations ? pfObservations : await searchObservationsForCkdRisk(patientId);
+  const familyHistories = (pf as any).familyHistory ? pfFamilyHistory : await searchFamilyMemberHistory(patientId);
 
+  // 4) 決定用哪個引擎：USE_ELM=true 走 ELM（失敗則 TS_FALLBACK），否則純 TS
   const useElm = (process.env.USE_ELM ?? '').toLowerCase() === 'true';
   let engine: 'ELM' | 'TS' | 'TS_FALLBACK' = useElm ? 'ELM' : 'TS';
 
-  const input: CkdRiskPrefetchInput = { patient, conditions, observations };
+  const input: CkdRiskPrefetchInput = { patient, conditions, observations, familyHistories };
 
   const result: CkdRiskElmResult = useElm
     ? await (async () => {
         try {
           return await evaluateCkdRiskWithElm(input);
         } catch {
+          // ELM 執行失敗時仍回卡片：降級到 TS，並在 cards.extension 標記 TS_FALLBACK（便於 QA）
           engine = 'TS_FALLBACK';
           return evaluateCkdRiskWithTs(input);
         }
       })()
     : evaluateCkdRiskWithTs(input);
 
+  // 5) 依風險因子旗標 + 缺漏檢測結果產生 cards（統一由 card builder 處理文案、優先序與 extension）
   const cards = buildCkdRiskCards({ engine, result });
   return { cards };
 }
