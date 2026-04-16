@@ -1,0 +1,99 @@
+{
+  "resourceType": "Bundle",
+  "type": "transaction",
+  "entry": [
+    {
+      "fullUrl": "urn:uuid:patient-ckd-102",
+      "resource": {
+        "resourceType": "Patient",
+        "id": "patient-ckd-102",
+        "active": true,
+        "name": [
+          {
+            "use": "official",
+            "family": "Wang",
+            "given": ["Case02"]
+          }
+        ],
+        "gender": "female",
+        "birthDate": "1985-02-02"
+      },
+      "request": { "method": "PUT", "url": "Patient/patient-ckd-102" }
+    },
+    {
+      "fullUrl": "urn:uuid:obs-egfr-102",
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-egfr-102",
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                "code": "laboratory"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "62238-1",
+              "display": "eGFR (CKD-EPI)"
+            }
+          ],
+          "text": "eGFR"
+        },
+        "subject": { "reference": "Patient/patient-ckd-102" },
+        "effectiveDateTime": "2026-04-15T08:30:00+08:00",
+        "valueQuantity": {
+          "value": 65,
+          "unit": "mL/min/1.73/m2",
+          "system": "http://unitsofmeasure.org",
+          "code": "mL/min/1.73/m2"
+        }
+      },
+      "request": { "method": "PUT", "url": "Observation/obs-egfr-102" }
+    },
+    {
+      "fullUrl": "urn:uuid:obs-crea-102",
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-crea-102",
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                "code": "laboratory"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "2160-0",
+              "display": "Creatinine [Mass/volume] in Serum or Plasma"
+            }
+          ],
+          "text": "Creatinine"
+        },
+        "subject": { "reference": "Patient/patient-ckd-102" },
+        "effectiveDateTime": "2026-04-15T08:30:00+08:00",
+        "valueQuantity": {
+          "value": 0.9,
+          "unit": "mg/dL",
+          "system": "http://unitsofmeasure.org",
+          "code": "mg/dL"
+        }
+      },
+      "request": { "method": "PUT", "url": "Observation/obs-crea-102" }
+    }
+  ]
+}
+

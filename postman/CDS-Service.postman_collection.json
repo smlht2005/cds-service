@@ -1,0 +1,213 @@
+{
+  "info": {
+    "name": "CDS Service",
+    "description": "CDS Hooks：Discovery（GET /cds-services）與 Hook（POST egfr-check / ckd-risk）。\n變數 baseUrl 預設 http://127.0.0.1:3000；patientId 預設 patient-ckd-001。\n啟動服務：npm start；FHIR 需可連（FHIR_BASE_URL）。",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://127.0.0.1:3000"
+    },
+    {
+      "key": "fhirBaseUrl",
+      "value": "http://localhost:9090/fhir"
+    },
+    {
+      "key": "patientId",
+      "value": "patient-ckd-001"
+    }
+  ],
+  "item": [
+    {
+      "name": "Discovery",
+      "item": [
+        {
+          "name": "GET /cds-services",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/cds-services",
+            "description": "回傳 services 清單（含 egfr-check、ckd-risk 與 prefetch 範本）。"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Hooks",
+      "item": [
+        {
+          "name": "POST /cds-services/egfr-check",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json; charset=utf-8"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"hook\": \"patient-view\",\n  \"context\": {\n    \"patientId\": \"{{patientId}}\"\n  }\n}"
+            },
+            "url": "{{baseUrl}}/cds-services/egfr-check",
+            "description": "步驟二主路徑；無 prefetch 時會以 fhirClient 向 FHIR 查詢。"
+          },
+          "response": []
+        },
+        {
+          "name": "POST /cds-services/ckd-risk",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json; charset=utf-8"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"hook\": \"patient-view\",\n  \"context\": {\n    \"patientId\": \"{{patientId}}\"\n  }\n}"
+            },
+            "url": "{{baseUrl}}/cds-services/ckd-risk",
+            "description": "ckd-risk v1 為 prefetch-only（需要 patient/conditions/observations）。不帶 prefetch 會回 warning：prefetch required。"
+          },
+          "response": []
+        },
+        {
+          "name": "POST /cds-services/egfr-check (with prefetch stub)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json; charset=utf-8"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"hook\": \"patient-view\",\n  \"context\": {\n    \"patientId\": \"{{patientId}}\"\n  },\n  \"prefetch\": {\n    \"comment\": \"實際由 EHR 帶入 Bundle/Observation；此為結構範例，需替換為真實 FHIR JSON\"\n  }\n}"
+            },
+            "url": "{{baseUrl}}/cds-services/egfr-check",
+            "description": "示範 prefetch 欄位位置；真測請用 EHR 回傳的 prefetch 或省略以走 FHIR fallback。"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "FHIR TestData（5 samples）",
+      "item": [
+        {
+          "name": "01 Import（transaction） — case-01 patient-ckd-101 (eGFR 45, bad unit mL/min/1.73m2)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/fhir+json" },
+              { "key": "Accept", "value": "application/fhir+json" }
+            ],
+            "url": "{{fhirBaseUrl}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"resourceType\": \"Bundle\",\n  \"type\": \"transaction\",\n  \"entry\": [\n    {\n      \"fullUrl\": \"urn:uuid:patient-ckd-101\",\n      \"resource\": {\n        \"resourceType\": \"Patient\",\n        \"id\": \"patient-ckd-101\",\n        \"active\": true,\n        \"name\": [\n          {\n            \"use\": \"official\",\n            \"family\": \"Wang\",\n            \"given\": [\"Case01\"]\n          }\n        ],\n        \"gender\": \"male\",\n        \"birthDate\": \"1970-01-01\"\n      },\n      \"request\": { \"method\": \"PUT\", \"url\": \"Patient/patient-ckd-101\" }\n    },\n    {\n      \"fullUrl\": \"urn:uuid:obs-egfr-101\",\n      \"resource\": {\n        \"resourceType\": \"Observation\",\n        \"id\": \"obs-egfr-101\",\n        \"status\": \"final\",\n        \"category\": [\n          {\n            \"coding\": [\n              {\n                \"system\": \"http://terminology.hl7.org/CodeSystem/observation-category\",\n                \"code\": \"laboratory\"\n              }\n            ]\n          }\n        ],\n        \"code\": {\n          \"coding\": [\n            {\n              \"system\": \"http://loinc.org\",\n              \"code\": \"62238-1\",\n              \"display\": \"eGFR (CKD-EPI)\"\n            }\n          ],\n          \"text\": \"eGFR\"\n        },\n        \"subject\": { \"reference\": \"Patient/patient-ckd-101\" },\n        \"effectiveDateTime\": \"2026-04-15T08:00:00+08:00\",\n        \"valueQuantity\": {\n          \"value\": 45,\n          \"unit\": \"mL/min/1.73m2\",\n          \"system\": \"http://unitsofmeasure.org\",\n          \"code\": \"mL/min/1.73m2\"\n        }\n      },\n      \"request\": { \"method\": \"PUT\", \"url\": \"Observation/obs-egfr-101\" }\n    },\n    {\n      \"fullUrl\": \"urn:uuid:obs-crea-101\",\n      \"resource\": {\n        \"resourceType\": \"Observation\",\n        \"id\": \"obs-crea-101\",\n        \"status\": \"final\",\n        \"category\": [\n          {\n            \"coding\": [\n              {\n                \"system\": \"http://terminology.hl7.org/CodeSystem/observation-category\",\n                \"code\": \"laboratory\"\n              }\n            ]\n          }\n        ],\n        \"code\": {\n          \"coding\": [\n            {\n              \"system\": \"http://loinc.org\",\n              \"code\": \"2160-0\",\n              \"display\": \"Creatinine [Mass/volume] in Serum or Plasma\"\n            }\n          ],\n          \"text\": \"Creatinine\"\n        },\n        \"subject\": { \"reference\": \"Patient/patient-ckd-101\" },\n        \"effectiveDateTime\": \"2026-04-15T08:00:00+08:00\",\n        \"valueQuantity\": {\n          \"value\": 1.5,\n          \"unit\": \"mg/dL\",\n          \"system\": \"http://unitsofmeasure.org\",\n          \"code\": \"mg/dL\"\n        }\n      },\n      \"request\": { \"method\": \"PUT\", \"url\": \"Observation/obs-crea-101\" }\n    }\n  ]\n}\n"
+            }
+          }
+        },
+        {
+          "name": "01 Import（transaction） — case-02 patient-ckd-102 (eGFR 65)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/fhir+json" },
+              { "key": "Accept", "value": "application/fhir+json" }
+            ],
+            "url": "{{fhirBaseUrl}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"resourceType\": \"Bundle\",\n  \"type\": \"transaction\",\n  \"entry\": [\n    {\n      \"fullUrl\": \"urn:uuid:patient-ckd-102\",\n      \"resource\": {\n        \"resourceType\": \"Patient\",\n        \"id\": \"patient-ckd-102\",\n        \"active\": true,\n        \"name\": [\n          {\n            \"use\": \"official\",\n            \"family\": \"Wang\",\n            \"given\": [\"Case02\"]\n          }\n        ],\n        \"gender\": \"female\",\n        \"birthDate\": \"1985-02-02\"\n      },\n      \"request\": { \"method\": \"PUT\", \"url\": \"Patient/patient-ckd-102\" }\n    },\n    {\n      \"fullUrl\": \"urn:uuid:obs-egfr-102\",\n      \"resource\": {\n        \"resourceType\": \"Observation\",\n        \"id\": \"obs-egfr-102\",\n        \"status\": \"final\",\n        \"code\": { \"coding\": [ { \"system\": \"http://loinc.org\", \"code\": \"62238-1\" } ], \"text\": \"eGFR\" },\n        \"subject\": { \"reference\": \"Patient/patient-ckd-102\" },\n        \"effectiveDateTime\": \"2026-04-15T08:30:00+08:00\",\n        \"valueQuantity\": {\n          \"value\": 65,\n          \"unit\": \"mL/min/1.73/m2\",\n          \"system\": \"http://unitsofmeasure.org\",\n          \"code\": \"mL/min/1.73/m2\"\n        }\n      },\n      \"request\": { \"method\": \"PUT\", \"url\": \"Observation/obs-egfr-102\" }\n    },\n    {\n      \"fullUrl\": \"urn:uuid:obs-crea-102\",\n      \"resource\": {\n        \"resourceType\": \"Observation\",\n        \"id\": \"obs-crea-102\",\n        \"status\": \"final\",\n        \"code\": { \"coding\": [ { \"system\": \"http://loinc.org\", \"code\": \"2160-0\" } ], \"text\": \"Creatinine\" },\n        \"subject\": { \"reference\": \"Patient/patient-ckd-102\" },\n        \"effectiveDateTime\": \"2026-04-15T08:30:00+08:00\",\n        \"valueQuantity\": {\n          \"value\": 0.9,\n          \"unit\": \"mg/dL\",\n          \"system\": \"http://unitsofmeasure.org\",\n          \"code\": \"mg/dL\"\n        }\n      },\n      \"request\": { \"method\": \"PUT\", \"url\": \"Observation/obs-crea-102\" }\n    }\n  ]\n}\n"
+            }
+          }
+        },
+        {
+          "name": "01 Import（transaction） — case-03 patient-ckd-103 (eGFR 59.9)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/fhir+json" },
+              { "key": "Accept", "value": "application/fhir+json" }
+            ],
+            "url": "{{fhirBaseUrl}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"resourceType\": \"Bundle\",\n  \"type\": \"transaction\",\n  \"entry\": [\n    {\n      \"fullUrl\": \"urn:uuid:patient-ckd-103\",\n      \"resource\": {\n        \"resourceType\": \"Patient\",\n        \"id\": \"patient-ckd-103\",\n        \"active\": true,\n        \"name\": [\n          {\n            \"use\": \"official\",\n            \"family\": \"Wang\",\n            \"given\": [\"Case03\"]\n          }\n        ],\n        \"gender\": \"male\",\n        \"birthDate\": \"1990-03-03\"\n      },\n      \"request\": { \"method\": \"PUT\", \"url\": \"Patient/patient-ckd-103\" }\n    },\n    {\n      \"fullUrl\": \"urn:uuid:obs-egfr-103\",\n      \"resource\": {\n        \"resourceType\": \"Observation\",\n        \"id\": \"obs-egfr-103\",\n        \"status\": \"final\",\n        \"code\": { \"coding\": [ { \"system\": \"http://loinc.org\", \"code\": \"62238-1\" } ], \"text\": \"eGFR\" },\n        \"subject\": { \"reference\": \"Patient/patient-ckd-103\" },\n        \"effectiveDateTime\": \"2026-04-15T09:00:00+08:00\",\n        \"valueQuantity\": {\n          \"value\": 59.9,\n          \"unit\": \"mL/min/1.73/m2\",\n          \"system\": \"http://unitsofmeasure.org\",\n          \"code\": \"mL/min/1.73/m2\"\n        }\n      },\n      \"request\": { \"method\": \"PUT\", \"url\": \"Observation/obs-egfr-103\" }\n    },\n    {\n      \"fullUrl\": \"urn:uuid:obs-crea-103\",\n      \"resource\": {\n        \"resourceType\": \"Observation\",\n        \"id\": \"obs-crea-103\",\n        \"status\": \"final\",\n        \"code\": { \"coding\": [ { \"system\": \"http://loinc.org\", \"code\": \"2160-0\" } ], \"text\": \"Creatinine\" },\n        \"subject\": { \"reference\": \"Patient/patient-ckd-103\" },\n        \"effectiveDateTime\": \"2026-04-15T09:00:00+08:00\",\n        \"valueQuantity\": {\n          \"value\": 1.2,\n          \"unit\": \"mg/dL\",\n          \"system\": \"http://unitsofmeasure.org\",\n          \"code\": \"mg/dL\"\n        }\n      },\n      \"request\": { \"method\": \"PUT\", \"url\": \"Observation/obs-crea-103\" }\n    }\n  ]\n}\n"
+            }
+          }
+        },
+        {
+          "name": "01 Import（transaction） — case-04 patient-ckd-104 (eGFR 45, missing unit/code)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/fhir+json" },
+              { "key": "Accept", "value": "application/fhir+json" }
+            ],
+            "url": "{{fhirBaseUrl}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"resourceType\": \"Bundle\",\n  \"type\": \"transaction\",\n  \"entry\": [\n    {\n      \"fullUrl\": \"urn:uuid:patient-ckd-104\",\n      \"resource\": {\n        \"resourceType\": \"Patient\",\n        \"id\": \"patient-ckd-104\",\n        \"active\": true,\n        \"name\": [\n          {\n            \"use\": \"official\",\n            \"family\": \"Wang\",\n            \"given\": [\"Case04\"]\n          }\n        ],\n        \"gender\": \"female\",\n        \"birthDate\": \"1975-04-04\"\n      },\n      \"request\": { \"method\": \"PUT\", \"url\": \"Patient/patient-ckd-104\" }\n    },\n    {\n      \"fullUrl\": \"urn:uuid:obs-egfr-104\",\n      \"resource\": {\n        \"resourceType\": \"Observation\",\n        \"id\": \"obs-egfr-104\",\n        \"status\": \"final\",\n        \"code\": { \"coding\": [ { \"system\": \"http://loinc.org\", \"code\": \"62238-1\" } ], \"text\": \"eGFR\" },\n        \"subject\": { \"reference\": \"Patient/patient-ckd-104\" },\n        \"effectiveDateTime\": \"2026-04-15T09:30:00+08:00\",\n        \"valueQuantity\": {\n          \"value\": 45,\n          \"system\": \"http://unitsofmeasure.org\"\n        }\n      },\n      \"request\": { \"method\": \"PUT\", \"url\": \"Observation/obs-egfr-104\" }\n    },\n    {\n      \"fullUrl\": \"urn:uuid:obs-crea-104\",\n      \"resource\": {\n        \"resourceType\": \"Observation\",\n        \"id\": \"obs-crea-104\",\n        \"status\": \"final\",\n        \"code\": { \"coding\": [ { \"system\": \"http://loinc.org\", \"code\": \"2160-0\" } ], \"text\": \"Creatinine\" },\n        \"subject\": { \"reference\": \"Patient/patient-ckd-104\" },\n        \"effectiveDateTime\": \"2026-04-15T09:30:00+08:00\",\n        \"valueQuantity\": {\n          \"value\": 1.6,\n          \"unit\": \"mg/dL\",\n          \"system\": \"http://unitsofmeasure.org\",\n          \"code\": \"mg/dL\"\n        }\n      },\n      \"request\": { \"method\": \"PUT\", \"url\": \"Observation/obs-crea-104\" }\n    }\n  ]\n}\n"
+            }
+          }
+        },
+        {
+          "name": "01 Import（transaction） — case-05 patient-ckd-105 (no eGFR)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/fhir+json" },
+              { "key": "Accept", "value": "application/fhir+json" }
+            ],
+            "url": "{{fhirBaseUrl}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"resourceType\": \"Bundle\",\n  \"type\": \"transaction\",\n  \"entry\": [\n    {\n      \"fullUrl\": \"urn:uuid:patient-ckd-105\",\n      \"resource\": {\n        \"resourceType\": \"Patient\",\n        \"id\": \"patient-ckd-105\",\n        \"active\": true,\n        \"name\": [\n          {\n            \"use\": \"official\",\n            \"family\": \"Wang\",\n            \"given\": [\"Case05\"]\n          }\n        ],\n        \"gender\": \"male\",\n        \"birthDate\": \"1966-05-05\"\n      },\n      \"request\": { \"method\": \"PUT\", \"url\": \"Patient/patient-ckd-105\" }\n    },\n    {\n      \"fullUrl\": \"urn:uuid:obs-crea-105\",\n      \"resource\": {\n        \"resourceType\": \"Observation\",\n        \"id\": \"obs-crea-105\",\n        \"status\": \"final\",\n        \"code\": { \"coding\": [ { \"system\": \"http://loinc.org\", \"code\": \"2160-0\" } ], \"text\": \"Creatinine\" },\n        \"subject\": { \"reference\": \"Patient/patient-ckd-105\" },\n        \"effectiveDateTime\": \"2026-04-15T10:00:00+08:00\",\n        \"valueQuantity\": {\n          \"value\": 1.1,\n          \"unit\": \"mg/dL\",\n          \"system\": \"http://unitsofmeasure.org\",\n          \"code\": \"mg/dL\"\n        }\n      },\n      \"request\": { \"method\": \"PUT\", \"url\": \"Observation/obs-crea-105\" }\n    }\n  ]\n}\n"
+            }
+          }
+        },
+        {
+          "name": "02 Query — GET Patient/patient-ckd-101",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/fhir+json" }],
+            "url": "{{fhirBaseUrl}}/Patient/patient-ckd-101"
+          }
+        },
+        {
+          "name": "02 Query — SEARCH eGFR (patient-ckd-101, code=62238-1)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/fhir+json" }],
+            "url": "{{fhirBaseUrl}}/Observation?patient=patient-ckd-101&code=62238-1"
+          }
+        }
+      ]
+    }
+  ]
+}

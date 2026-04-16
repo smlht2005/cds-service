@@ -1,0 +1,81 @@
+# --- 依專案既有規則保留 ---
+node_modules/
+dist/
+scripts/target/
+scripts/**/target/
+# cql-to-elm／Maven 於專案根目錄產生的 package 輸出（非應用程式碼）
+org/
+
+# Cursor 工作流程範本（非 CDS 執行原始碼）
+.spec-workflow/
+
+*.log
+.env
+.env.local
+
+# --- 環境變數（勿提交密鑰；範本檔可納版控）---
+.env.*
+!.env.example
+!**/.env.example
+
+# --- 建置輸出 ---
+frontend/dist/
+frontend/build/
+build/
+out/
+*.tsbuildinfo
+
+# --- 日誌與執行輸出 ---
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# --- 測試／涵蓋率 ---
+coverage/
+.nyc_output/
+*.lcov
+
+# --- 快取與工具暫存 ---
+.cache/
+.parcel-cache/
+.turbo/
+frontend/.vite/
+*.tmp
+*.temp
+.temp/
+
+# --- 作業系統 ---
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# --- IDE／編輯器 ---
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.swp
+*~
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+
+# --- 發佈／壓縮 ---
+*.tgz
+
+# --- ESLint／工具快取（若日後啟用）---
+.eslintcache
+.stylelintcache

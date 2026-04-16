@@ -1,0 +1,272 @@
+{
+  "info": {
+    "name": "CDS Service — E2E（TC-HOOK / TC-PF / TC-ERR）",
+    "description": "對應 docs/E2E_Test_Plan.md 區塊 3～5。\n\n**變數**\n- `baseUrl`：CDS Service（預設 http://127.0.0.1:3000）\n- `patientIdCaseA`：eGFR < 60 案例（預設 patient-ckd-001）\n- `patientIdCaseB`：eGFR ≥ 60 或無複查（請改為院內實際 ID；預設 patient-ckd-001 時若資料仍 <60 則 warning 仍可能出現）\n- `patientIdMissingScenario`：TC-ERR-03 用不存在病患（預設 does-not-exist-000000）\n\n**前置**：HAPI FHIR 已啟動、`npm start`、`.env` 之 FHIR_BASE_URL 正確。錯誤路徑（TC-ERR-01～02）需依說明手動改環境後再送。",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "try {",
+          "  const expected = pm.collectionVariables.get('expectedRuleEngine');",
+          "  if (!expected) {",
+          "    return;",
+          "  }",
+          "  const json = pm.response.json();",
+          "  const ext = json?.cards?.[0]?.extension?.[0];",
+          "  pm.test('cards[0].extension has rule-engine', function () {",
+          "    pm.expect(ext).to.be.an('object');",
+          "    pm.expect(ext.url).to.eql('urn:cds-service:rule-engine');",
+          "  });",
+          "  pm.test('rule-engine matches expected', function () {",
+          "    pm.expect(ext.valueString).to.eql(expected);",
+          "  });",
+          "} catch (e) {",
+          "  // ignore non-JSON / error responses (e.g. 502 OperationOutcome) if they aren't CDS cards payload",
+          "}"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    { "key": "baseUrl", "value": "http://127.0.0.1:3000" },
+    { "key": "patientIdCaseA", "value": "patient-ckd-001" },
+    { "key": "patientIdCaseB", "value": "patient-healthy-egfr-001" },
+    { "key": "patientIdNonExistent", "value": "does-not-exist-000000" },
+    { "key": "expectedRuleEngine", "value": "ELM" }
+  ],
+  "item": [
+    {
+      "name": "TC-HOOK（主路徑，無 Prefetch）",
+      "item": [
+        {
+          "name": "TC-HOOK-01 POST egfr-check（案例 A）",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json; charset=utf-8" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"hook\": \"patient-view\",\n  \"context\": {\n    \"patientId\": \"{{patientIdCaseA}}\"\n  }\n}"
+            },
+            "url": "{{baseUrl}}/cds-services/egfr-check",
+            "description": "預期：HTTP 200，`cards` 為陣列。案例 A（eGFR<60）時應含 info + warning（見 TC-HOOK-03）。"
+          },
+          "response": []
+        },
+        {
+          "name": "TC-HOOK-02 POST ckd-risk（hybrid：無 prefetch，僅 patientId）",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json; charset=utf-8" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"hook\": \"patient-view\",\n  \"context\": {\n    \"patientId\": \"{{patientIdCaseA}}\"\n  }\n}"
+            },
+            "url": "{{baseUrl}}/cds-services/ckd-risk",
+            "description": "ckd-risk v1 為 hybrid（prefetch 建議但可省略）。預期：HTTP 200；回傳 CKD risk summary（info）與缺漏提醒（warning，依測資而定）。"
+          },
+          "response": []
+        },
+        {
+          "name": "TC-HOOK-03 複查規則（案例 A，同 TC-HOOK-01）",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json; charset=utf-8" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"hook\": \"patient-view\",\n  \"context\": {\n    \"patientId\": \"{{patientIdCaseA}}\"\n  }\n}"
+            },
+            "url": "{{baseUrl}}/cds-services/egfr-check",
+            "description": "手動斷言：至少 2 張卡；一張 `indicator: info`；一張 `warning`；warning 含 `source.url`、`links[0].url` 指向 FHIR Observation?code=62238-1。"
+          },
+          "response": []
+        },
+        {
+          "name": "TC-HOOK-04 POST egfr-check（案例 B，請改 patientIdCaseB）",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json; charset=utf-8" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"hook\": \"patient-view\",\n  \"context\": {\n    \"patientId\": \"{{patientIdCaseB}}\"\n  }\n}"
+            },
+            "url": "{{baseUrl}}/cds-services/egfr-check",
+            "description": "預期：無 eGFR 複查 **warning**（僅 info），若該病患 eGFR≥60 或無 62238-1。請將 Collection 變數 `patientIdCaseB` 設為院內「高 eGFR」測試病患。"
+          },
+          "response": []
+        },
+        {
+          "name": "TC-HOOK-05 缺少 patientId",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json; charset=utf-8" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"hook\": \"patient-view\",\n  \"context\": {}\n}"
+            },
+            "url": "{{baseUrl}}/cds-services/egfr-check",
+            "description": "預期：HTTP 200；`cards` 含 warning「缺少 patientId」。"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "TC-PF（含 Prefetch）",
+      "item": [
+        {
+          "name": "TC-PF-CKD-01 POST ckd-risk（完整 prefetch；缺 uACR → 預期 1 張 warning：Order uACR）",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json; charset=utf-8" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"hook\": \"patient-view\",\n  \"context\": {\n    \"patientId\": \"patient-ckd-101\"\n  },\n  \"prefetch\": {\n    \"patient\": {\n      \"resourceType\": \"Patient\",\n      \"id\": \"patient-ckd-101\",\n      \"birthDate\": \"1970-01-01\"\n    },\n    \"conditions\": {\n      \"resourceType\": \"Bundle\",\n      \"type\": \"searchset\",\n      \"total\": 0,\n      \"entry\": []\n    },\n    \"observations\": {\n      \"resourceType\": \"Bundle\",\n      \"type\": \"searchset\",\n      \"total\": 2,\n      \"entry\": [\n        {\n          \"resource\": {\n            \"resourceType\": \"Observation\",\n            \"id\": \"pf-egfr-101\",\n            \"status\": \"final\",\n            \"code\": {\n              \"coding\": [\n                {\n                  \"system\": \"http://loinc.org\",\n                  \"code\": \"62238-1\"\n                }\n              ],\n              \"text\": \"eGFR\"\n            },\n            \"subject\": {\n              \"reference\": \"Patient/patient-ckd-101\"\n            },\n            \"issued\": \"2026-04-15T00:00:00.000Z\",\n            \"valueQuantity\": {\n              \"value\": 45,\n              \"unit\": \"mL/min/1.73/m2\",\n              \"system\": \"http://unitsofmeasure.org\",\n              \"code\": \"mL/min/1.73/m2\"\n            }\n          }\n        },\n        {\n          \"resource\": {\n            \"resourceType\": \"Observation\",\n            \"id\": \"pf-bmi-101\",\n            \"status\": \"final\",\n            \"code\": {\n              \"coding\": [\n                {\n                  \"system\": \"http://loinc.org\",\n                  \"code\": \"39156-5\"\n                }\n              ],\n              \"text\": \"BMI\"\n            },\n            \"subject\": {\n              \"reference\": \"Patient/patient-ckd-101\"\n            },\n            \"issued\": \"2026-04-15T00:00:00.000Z\",\n            \"valueQuantity\": {\n              \"value\": 31,\n              \"unit\": \"kg/m2\",\n              \"system\": \"http://unitsofmeasure.org\",\n              \"code\": \"kg/m2\"\n            }\n          }\n        }\n      ]\n    }\n  }\n}"
+            },
+            "url": "{{baseUrl}}/cds-services/ckd-risk",
+            "description": "ckd-risk v1 為 prefetch-only。此案例提供 patient/conditions/observations（含 eGFR + BMI，刻意不提供 uACR）→ 預期 cards：1×info summary + 1×warning（Order uACR）。"
+          },
+          "response": []
+        },
+        {
+          "name": "TC-PF-CKD-02 POST ckd-risk（完整 prefetch；補 uACR → 預期無 uACR warning）",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json; charset=utf-8" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"hook\": \"patient-view\",\n  \"context\": {\n    \"patientId\": \"patient-ckd-101\"\n  },\n  \"prefetch\": {\n    \"patient\": {\n      \"resourceType\": \"Patient\",\n      \"id\": \"patient-ckd-101\",\n      \"birthDate\": \"1970-01-01\"\n    },\n    \"conditions\": {\n      \"resourceType\": \"Bundle\",\n      \"type\": \"searchset\",\n      \"total\": 0,\n      \"entry\": []\n    },\n    \"observations\": {\n      \"resourceType\": \"Bundle\",\n      \"type\": \"searchset\",\n      \"total\": 3,\n      \"entry\": [\n        {\n          \"resource\": {\n            \"resourceType\": \"Observation\",\n            \"id\": \"pf-egfr-101\",\n            \"status\": \"final\",\n            \"code\": {\n              \"coding\": [\n                {\n                  \"system\": \"http://loinc.org\",\n                  \"code\": \"62238-1\"\n                }\n              ],\n              \"text\": \"eGFR\"\n            },\n            \"subject\": {\n              \"reference\": \"Patient/patient-ckd-101\"\n            },\n            \"issued\": \"2026-04-15T00:00:00.000Z\",\n            \"valueQuantity\": {\n              \"value\": 45,\n              \"unit\": \"mL/min/1.73/m2\",\n              \"system\": \"http://unitsofmeasure.org\",\n              \"code\": \"mL/min/1.73/m2\"\n            }\n          }\n        },\n        {\n          \"resource\": {\n            \"resourceType\": \"Observation\",\n            \"id\": \"pf-bmi-101\",\n            \"status\": \"final\",\n            \"code\": {\n              \"coding\": [\n                {\n                  \"system\": \"http://loinc.org\",\n                  \"code\": \"39156-5\"\n                }\n              ],\n              \"text\": \"BMI\"\n            },\n            \"subject\": {\n              \"reference\": \"Patient/patient-ckd-101\"\n            },\n            \"issued\": \"2026-04-15T00:00:00.000Z\",\n            \"valueQuantity\": {\n              \"value\": 31,\n              \"unit\": \"kg/m2\",\n              \"system\": \"http://unitsofmeasure.org\",\n              \"code\": \"kg/m2\"\n            }\n          }\n        },\n        {\n          \"resource\": {\n            \"resourceType\": \"Observation\",\n            \"id\": \"pf-uacr-101\",\n            \"status\": \"final\",\n            \"code\": {\n              \"coding\": [\n                {\n                  \"system\": \"http://loinc.org\",\n                  \"code\": \"9318-7\"\n                }\n              ],\n              \"text\": \"uACR\"\n            },\n            \"subject\": {\n              \"reference\": \"Patient/patient-ckd-101\"\n            },\n            \"issued\": \"2026-04-15T00:00:00.000Z\",\n            \"valueQuantity\": {\n              \"value\": 10,\n              \"unit\": \"mg/g\",\n              \"system\": \"http://unitsofmeasure.org\",\n              \"code\": \"mg/g\"\n            }\n          }\n        }\n      ]\n    }\n  }\n}"
+            },
+            "url": "{{baseUrl}}/cds-services/ckd-risk",
+            "description": "與 TC-PF-CKD-01 相同，但補上 uACR（9318-7）。預期 cards：1×info summary；不再出現 uACR missing warning。"
+          },
+          "response": []
+        },
+        {
+          "name": "TC-PF-01 latestEgfr = searchset Bundle",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json; charset=utf-8" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"hook\": \"patient-view\",\n  \"context\": {\n    \"patientId\": \"{{patientIdCaseA}}\"\n  },\n  \"prefetch\": {\n    \"latestEgfr\": {\n      \"resourceType\": \"Bundle\",\n      \"type\": \"searchset\",\n      \"total\": 1,\n      \"entry\": [\n        {\n          \"resource\": {\n            \"resourceType\": \"Observation\",\n            \"id\": \"e2e-prefetch-egfr-bundle\",\n            \"status\": \"final\",\n            \"category\": [\n              {\n                \"coding\": [\n                  {\n                    \"system\": \"http://terminology.hl7.org/CodeSystem/observation-category\",\n                    \"code\": \"laboratory\"\n                  }\n                ]\n              }\n            ],\n            \"code\": {\n              \"coding\": [\n                {\n                  \"system\": \"http://loinc.org\",\n                  \"code\": \"62238-1\",\n                  \"display\": \"eGFR\"\n                }\n              ]\n            },\n            \"subject\": {\n              \"reference\": \"Patient/{{patientIdCaseA}}\"\n            },\n            \"effectiveDateTime\": \"2024-06-01T08:00:00.000Z\",\n            \"valueQuantity\": {\n              \"value\": 45,\n              \"unit\": \"mL/min/1.73m2\",\n              \"system\": \"http://unitsofmeasure.org\",\n              \"code\": \"mL/min/1.73m2\"\n            }\n          }\n        }\n      ]\n    }\n  }\n}"
+            },
+            "url": "{{baseUrl}}/cds-services/egfr-check",
+            "description": "TC-PF-01：`prefetch.latestEgfr` 為 searchset Bundle，entry[0] 為 Observation。預期仍能得到 eGFR 列與（若 <60）複查 warning。"
+          },
+          "response": []
+        },
+        {
+          "name": "TC-PF-02 latestEgfr = 單一 Observation（非 Bundle）",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json; charset=utf-8" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"hook\": \"patient-view\",\n  \"context\": {\n    \"patientId\": \"{{patientIdCaseA}}\"\n  },\n  \"prefetch\": {\n    \"latestEgfr\": {\n      \"resourceType\": \"Observation\",\n      \"id\": \"e2e-prefetch-egfr-obs\",\n      \"status\": \"final\",\n      \"code\": {\n        \"coding\": [\n          {\n            \"system\": \"http://loinc.org\",\n            \"code\": \"62238-1\"\n          }\n        ]\n      },\n      \"subject\": {\n        \"reference\": \"Patient/{{patientIdCaseA}}\"\n      },\n      \"effectiveDateTime\": \"2024-06-01T08:00:00.000Z\",\n      \"valueQuantity\": {\n        \"value\": 45,\n        \"unit\": \"mL/min/1.73m2\"\n      }\n    }\n  }\n}"
+            },
+            "url": "{{baseUrl}}/cds-services/egfr-check",
+            "description": "TC-PF-02：直接傳 Observation（extractEGFRValue 亦支援）。若需驗證「僅 prefetch 數值」文案，請參考程式碼 egfrRecheckEvaluation 與 E2E 文件（需特定資料組合）。"
+          },
+          "response": []
+        },
+        {
+          "name": "TC-PF-03 POST egfr-check（Discovery 對齊：patient + latestEgfr + latestCreatinine）",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json; charset=utf-8" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"hook\": \"patient-view\",\n  \"context\": {\n    \"patientId\": \"{{patientIdCaseA}}\"\n  },\n  \"prefetch\": {\n    \"patient\": {\n      \"resourceType\": \"Patient\",\n      \"id\": \"{{patientIdCaseA}}\",\n      \"name\": [{ \"family\": \"E2E\", \"given\": [\"PF03\"] }]\n    },\n    \"latestEgfr\": {\n      \"resourceType\": \"Bundle\",\n      \"type\": \"searchset\",\n      \"total\": 1,\n      \"entry\": [\n        {\n          \"resource\": {\n            \"resourceType\": \"Observation\",\n            \"id\": \"e2e-pf03-egfr\",\n            \"status\": \"final\",\n            \"code\": {\n              \"coding\": [{ \"system\": \"http://loinc.org\", \"code\": \"62238-1\" }]\n            },\n            \"subject\": { \"reference\": \"Patient/{{patientIdCaseA}}\" },\n            \"effectiveDateTime\": \"2024-06-01T08:00:00.000Z\",\n            \"valueQuantity\": {\n              \"value\": 45,\n              \"unit\": \"mL/min/1.73/m2\",\n              \"system\": \"http://unitsofmeasure.org\",\n              \"code\": \"mL/min/1.73/m2\"\n            }\n          }\n        }\n      ]\n    },\n    \"latestCreatinine\": {\n      \"resourceType\": \"Bundle\",\n      \"type\": \"searchset\",\n      \"total\": 1,\n      \"entry\": [\n        {\n          \"resource\": {\n            \"resourceType\": \"Observation\",\n            \"id\": \"e2e-pf03-crea\",\n            \"status\": \"final\",\n            \"code\": {\n              \"coding\": [{ \"system\": \"http://loinc.org\", \"code\": \"2160-0\" }]\n            },\n            \"subject\": { \"reference\": \"Patient/{{patientIdCaseA}}\" },\n            \"effectiveDateTime\": \"2024-06-01T08:00:00.000Z\",\n            \"valueQuantity\": {\n              \"value\": 1.2,\n              \"unit\": \"mg/dL\",\n              \"system\": \"http://unitsofmeasure.org\",\n              \"code\": \"mg/dL\"\n            }\n          }\n        }\n      ]\n    }\n  }\n}"
+            },
+            "url": "{{baseUrl}}/cds-services/egfr-check",
+            "description": "與 Discovery `egfrCheckService.prefetch` 鍵一致：patient、latestEgfr、latestCreatinine（皆為可解析之 Bundle／Patient）。對照前端「Prefetch from FHIR (egfr-check)」送出行為。預期：與 TC-HOOK-01 類似（eGFR 45 → 複查 warning），且後端可自 prefetch 取得摘要列。"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "TC-ERR（錯誤路徑，多為手動環境）",
+      "item": [
+        {
+          "name": "TC-ERR-01 FHIR 關閉時（先停 HAPI 再送）",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json; charset=utf-8" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"hook\": \"patient-view\",\n  \"context\": {\n    \"patientId\": \"{{patientIdCaseA}}\"\n  }\n}"
+            },
+            "url": "{{baseUrl}}/cds-services/egfr-check",
+            "description": "**手動**：停止 HAPI FHIR 後執行本請求（仍需 CDS `npm start`）。預期：HTTP **502**，body 為 OperationOutcome 形狀。測完請恢復 FHIR。"
+          },
+          "response": []
+        },
+        {
+          "name": "TC-ERR-02（說明）錯誤 FHIR_BASE_URL",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": "{{baseUrl}}/cds-services",
+            "description": "非自動測試。**步驟**：(1) 停 CDS；(2) 將 `.env` 之 `FHIR_BASE_URL` 改為不存在之 host（例 http://127.0.0.1:59999/fhir）；(3) 重啟 `npm start`；(4) 改送 **POST** `{{baseUrl}}/cds-services/egfr-check`，body 同 TC-HOOK-01。預期 **502** 或連線錯誤於 diagnostics。**結束後**還原 `.env`。"
+          },
+          "response": []
+        },
+        {
+          "name": "TC-ERR-03 POST 不存在病患 ID",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json; charset=utf-8" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"hook\": \"patient-view\",\n  \"context\": {\n    \"patientId\": \"{{patientIdNonExistent}}\"\n  }\n}"
+            },
+            "url": "{{baseUrl}}/cds-services/egfr-check",
+            "description": "預期：FHIR 回 404 等 → CDS 可能 **502** 或錯誤訊息（依 fhirClient）。記錄實際 diagnostics。"
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,475 @@
+{
+  "library": {
+    "annotation": [
+      {
+        "translatorVersion": "3.26.0",
+        "translatorOptions": "",
+        "signatureLevel": "All",
+        "type": "CqlToElmInfo"
+      }
+    ],
+    "identifier": {
+      "id": "EGFR_Check",
+      "version": "1.0.0"
+    },
+    "schemaIdentifier": {
+      "id": "urn:hl7-org:elm",
+      "version": "r1"
+    },
+    "usings": {
+      "def": [
+        {
+          "localIdentifier": "System",
+          "uri": "urn:hl7-org:elm-types:r1",
+          "annotation": []
+        },
+        {
+          "localIdentifier": "FHIR",
+          "uri": "http://hl7.org/fhir",
+          "version": "4.0.1",
+          "annotation": []
+        }
+      ]
+    },
+    "includes": {
+      "def": [
+        {
+          "localIdentifier": "FHIRHelpers",
+          "path": "FHIRHelpers",
+          "version": "4.1.0",
+          "annotation": []
+        }
+      ]
+    },
+    "codeSystems": {
+      "def": [
+        {
+          "name": "LOINC",
+          "id": "http://loinc.org",
+          "accessLevel": "Public",
+          "annotation": []
+        }
+      ]
+    },
+    "codes": {
+      "def": [
+        {
+          "name": "eGFR Code",
+          "id": "62238-1",
+          "accessLevel": "Public",
+          "annotation": [],
+          "codeSystem": {
+            "name": "LOINC",
+            "annotation": []
+          }
+        }
+      ]
+    },
+    "contexts": {
+      "def": [
+        {
+          "name": "Patient",
+          "annotation": []
+        }
+      ]
+    },
+    "statements": {
+      "def": [
+        {
+          "name": "Patient",
+          "context": "Patient",
+          "annotation": [],
+          "expression": {
+            "type": "SingletonFrom",
+            "annotation": [],
+            "signature": [],
+            "operand": {
+              "dataType": "{http://hl7.org/fhir}Patient",
+              "templateId": "http://hl7.org/fhir/StructureDefinition/Patient",
+              "type": "Retrieve",
+              "annotation": [],
+              "include": [],
+              "codeFilter": [],
+              "dateFilter": [],
+              "otherFilter": []
+            }
+          }
+        },
+        {
+          "name": "eGFR Observations",
+          "context": "Patient",
+          "accessLevel": "Public",
+          "annotation": [],
+          "expression": {
+            "type": "Query",
+            "annotation": [],
+            "source": [
+              {
+                "alias": "Obs",
+                "annotation": [],
+                "expression": {
+                  "dataType": "{http://hl7.org/fhir}Observation",
+                  "templateId": "http://hl7.org/fhir/StructureDefinition/Observation",
+                  "codeProperty": "code",
+                  "codeComparator": "~",
+                  "type": "Retrieve",
+                  "annotation": [],
+                  "codes": {
+                    "type": "ToList",
+                    "annotation": [],
+                    "signature": [],
+                    "operand": {
+                      "name": "eGFR Code",
+                      "type": "CodeRef",
+                      "annotation": []
+                    }
+                  },
+                  "include": [],
+                  "codeFilter": [],
+                  "dateFilter": [],
+                  "otherFilter": []
+                }
+              }
+            ],
+            "let": [],
+            "relationship": [],
+            "where": {
+              "type": "In",
+              "annotation": [],
+              "signature": [
+                {
+                  "name": "{urn:hl7-org:elm-types:r1}String",
+                  "type": "NamedTypeSpecifier",
+                  "annotation": []
+                },
+                {
+                  "type": "ListTypeSpecifier",
+                  "annotation": [],
+                  "elementType": {
+                    "name": "{urn:hl7-org:elm-types:r1}String",
+                    "type": "NamedTypeSpecifier",
+                    "annotation": []
+                  }
+                }
+              ],
+              "operand": [
+                {
+                  "name": "ToString",
+                  "libraryName": "FHIRHelpers",
+                  "type": "FunctionRef",
+                  "annotation": [],
+                  "signature": [
+                    {
+                      "name": "{http://hl7.org/fhir}ObservationStatus",
+                      "type": "NamedTypeSpecifier",
+                      "annotation": []
+                    }
+                  ],
+                  "operand": [
+                    {
+                      "path": "status",
+                      "scope": "Obs",
+                      "type": "Property",
+                      "annotation": []
+                    }
+                  ]
+                },
+                {
+                  "type": "List",
+                  "annotation": [],
+                  "element": [
+                    {
+                      "valueType": "{urn:hl7-org:elm-types:r1}String",
+                      "value": "final",
+                      "type": "Literal",
+                      "annotation": []
+                    },
+                    {
+                      "valueType": "{urn:hl7-org:elm-types:r1}String",
+                      "value": "amended",
+                      "type": "Literal",
+                      "annotation": []
+                    }
+                  ]
+                }
+              ]
+            },
+            "sort": {
+              "annotation": [],
+              "by": [
+                {
+                  "direction": "desc",
+                  "path": "effective",
+                  "type": "ByColumn",
+                  "annotation": []
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Latest eGFR Value",
+          "context": "Patient",
+          "accessLevel": "Public",
+          "annotation": [],
+          "expression": {
+            "strict": false,
+            "type": "As",
+            "annotation": [],
+            "signature": [],
+            "operand": {
+              "path": "value",
+              "type": "Property",
+              "annotation": [],
+              "source": {
+                "type": "First",
+                "annotation": [],
+                "signature": [
+                  {
+                    "type": "ListTypeSpecifier",
+                    "annotation": [],
+                    "elementType": {
+                      "name": "{http://hl7.org/fhir}Observation",
+                      "type": "NamedTypeSpecifier",
+                      "annotation": []
+                    }
+                  }
+                ],
+                "source": {
+                  "name": "eGFR Observations",
+                  "type": "ExpressionRef",
+                  "annotation": []
+                }
+              }
+            },
+            "asTypeSpecifier": {
+              "name": "{http://hl7.org/fhir}Quantity",
+              "type": "NamedTypeSpecifier",
+              "annotation": []
+            }
+          }
+        },
+        {
+          "name": "Needs Recheck",
+          "context": "Patient",
+          "accessLevel": "Public",
+          "annotation": [],
+          "expression": {
+            "type": "And",
+            "annotation": [],
+            "signature": [
+              {
+                "name": "{urn:hl7-org:elm-types:r1}Boolean",
+                "type": "NamedTypeSpecifier",
+                "annotation": []
+              },
+              {
+                "name": "{urn:hl7-org:elm-types:r1}Boolean",
+                "type": "NamedTypeSpecifier",
+                "annotation": []
+              }
+            ],
+            "operand": [
+              {
+                "type": "Not",
+                "annotation": [],
+                "signature": [
+                  {
+                    "name": "{urn:hl7-org:elm-types:r1}Boolean",
+                    "type": "NamedTypeSpecifier",
+                    "annotation": []
+                  }
+                ],
+                "operand": {
+                  "type": "IsNull",
+                  "annotation": [],
+                  "signature": [
+                    {
+                      "name": "{urn:hl7-org:elm-types:r1}Any",
+                      "type": "NamedTypeSpecifier",
+                      "annotation": []
+                    }
+                  ],
+                  "operand": {
+                    "name": "Latest eGFR Value",
+                    "type": "ExpressionRef",
+                    "annotation": []
+                  }
+                }
+              },
+              {
+                "type": "Less",
+                "annotation": [],
+                "signature": [
+                  {
+                    "name": "{urn:hl7-org:elm-types:r1}Quantity",
+                    "type": "NamedTypeSpecifier",
+                    "annotation": []
+                  },
+                  {
+                    "name": "{urn:hl7-org:elm-types:r1}Quantity",
+                    "type": "NamedTypeSpecifier",
+                    "annotation": []
+                  }
+                ],
+                "operand": [
+                  {
+                    "name": "ToQuantity",
+                    "libraryName": "FHIRHelpers",
+                    "type": "FunctionRef",
+                    "annotation": [],
+                    "signature": [
+                      {
+                        "name": "{http://hl7.org/fhir}Quantity",
+                        "type": "NamedTypeSpecifier",
+                        "annotation": []
+                      }
+                    ],
+                    "operand": [
+                      {
+                        "name": "Latest eGFR Value",
+                        "type": "ExpressionRef",
+                        "annotation": []
+                      }
+                    ]
+                  },
+                  {
+                    "value": 60,
+                    "unit": "mL/min/1.73/m2",
+                    "type": "Quantity",
+                    "annotation": []
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "Recommendation Summary",
+          "context": "Patient",
+          "accessLevel": "Public",
+          "annotation": [],
+          "expression": {
+            "valueType": "{urn:hl7-org:elm-types:r1}String",
+            "value": "偵測到患者最近一次 eGFR 數值偏低",
+            "type": "Literal",
+            "annotation": []
+          }
+        },
+        {
+          "name": "Recommendation Detail",
+          "context": "Patient",
+          "accessLevel": "Public",
+          "annotation": [],
+          "expression": {
+            "type": "Concatenate",
+            "annotation": [],
+            "signature": [],
+            "operand": [
+              {
+                "type": "Concatenate",
+                "annotation": [],
+                "signature": [],
+                "operand": [
+                  {
+                    "type": "Concatenate",
+                    "annotation": [],
+                    "signature": [],
+                    "operand": [
+                      {
+                        "type": "Concatenate",
+                        "annotation": [],
+                        "signature": [],
+                        "operand": [
+                          {
+                            "valueType": "{urn:hl7-org:elm-types:r1}String",
+                            "value": "患者最新 eGFR 為 ",
+                            "type": "Literal",
+                            "annotation": []
+                          },
+                          {
+                            "type": "ToString",
+                            "annotation": [],
+                            "signature": [
+                              {
+                                "name": "{urn:hl7-org:elm-types:r1}Decimal",
+                                "type": "NamedTypeSpecifier",
+                                "annotation": []
+                              }
+                            ],
+                            "operand": {
+                              "name": "ToDecimal",
+                              "libraryName": "FHIRHelpers",
+                              "type": "FunctionRef",
+                              "annotation": [],
+                              "signature": [
+                                {
+                                  "name": "{http://hl7.org/fhir}decimal",
+                                  "type": "NamedTypeSpecifier",
+                                  "annotation": []
+                                }
+                              ],
+                              "operand": [
+                                {
+                                  "path": "value",
+                                  "type": "Property",
+                                  "annotation": [],
+                                  "source": {
+                                    "name": "Latest eGFR Value",
+                                    "type": "ExpressionRef",
+                                    "annotation": []
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "valueType": "{urn:hl7-org:elm-types:r1}String",
+                        "value": " ",
+                        "type": "Literal",
+                        "annotation": []
+                      }
+                    ]
+                  },
+                  {
+                    "name": "ToString",
+                    "libraryName": "FHIRHelpers",
+                    "type": "FunctionRef",
+                    "annotation": [],
+                    "signature": [
+                      {
+                        "name": "{http://hl7.org/fhir}string",
+                        "type": "NamedTypeSpecifier",
+                        "annotation": []
+                      }
+                    ],
+                    "operand": [
+                      {
+                        "path": "unit",
+                        "type": "Property",
+                        "annotation": [],
+                        "source": {
+                          "name": "Latest eGFR Value",
+                          "type": "ExpressionRef",
+                          "annotation": []
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "valueType": "{urn:hl7-org:elm-types:r1}String",
+                "value": "，低於正常門檻值 60，建議安排腎功能複查以確認病況發展。",
+                "type": "Literal",
+                "annotation": []
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}
