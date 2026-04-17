@@ -1,4 +1,12 @@
 <!--
+更新時間：2026-04-17 11:34
+作者：CDS Service
+摘要：.gitignore 新增 docs/git/；已執行 git rm --cached 停止追蹤該資料夾（檔案仍保留本機）；同步更新本檔系統時間戳
+
+更新時間：2026-04-17 11:30
+作者：CDS Service
+摘要：docs/git/fetch與pull簡明說明與QA.md 補充 merge 衝突／MERGE_HEAD 實例與 Q15–Q18；同步更新本檔系統時間戳
+
 更新時間：2026-04-17 10:54
 作者：CDS Service
 摘要：docs/git/fetch與pull簡明說明與QA.md 補充 credential.helper（manager）實務摘要與 Q11–Q14；同步更新本檔系統時間戳
@@ -182,7 +190,7 @@
 
 ## 系統日期時間（建置／文件更新時請一併更新本段與檔案頂部歷史）
 
-- **記錄時間**：2026-04-17 10:54（台灣本機時區 UTC+8；cmd `echo %date% %time%`：2026/04/17 10:54:52.09）
+- **記錄時間**：2026-04-17 11:34（台灣本機時區 UTC+8；cmd `echo %date% %time%`：2026/04/17 11:34:07.82）
 
 ## 需求
 
