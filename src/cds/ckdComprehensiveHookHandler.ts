@@ -15,188 +15,9 @@ import { evaluateCkdRiskWithElm, type CkdRiskElmResult, type CkdRiskPrefetchInpu
 import { evaluateCkdComprehensiveWithElm, type CkdComprehensiveElmResult } from '../cql/ckdComprehensiveElmExecutor.js';
 import { getPatient, searchActiveConditions, searchObservationsForCkdRisk } from '../fhir/fhirClient.js';
 import type { CdsHooksRequest, CdsHooksResponse } from './ckdHookHandler.js';
+import { evaluateCkdRiskWithTs } from './ckdHookHandler.js';
 import { buildCkdComprehensiveCards } from './ckdComprehensiveCardBuilder.js';
-
-function extractBundleResources(
-  prefetchValue: unknown,
-  expectedType?: string,
-): Array<Record<string, unknown>> {
-  if (!prefetchValue || typeof prefetchValue !== 'object') return [];
-  const obj = prefetchValue as Record<string, unknown>;
-  if (obj.resourceType === 'Bundle') {
-    const entry = (obj.entry as Array<{ resource?: Record<string, unknown> }> | undefined) ?? [];
-    const resources = entry.map((e) => e.resource).filter(Boolean) as Array<Record<string, unknown>>;
-    if (!expectedType) return resources;
-    return resources.filter((r) => r.resourceType === expectedType);
-  }
-  if (obj.resourceType) {
-    if (!expectedType || obj.resourceType === expectedType) return [obj as Record<string, unknown>];
-    return [];
-  }
-  return [];
-}
-
-function stripPatientPrefix(id: string): string {
-  if (id.startsWith('Patient/')) return id.slice('Patient/'.length);
-  return id;
-}
-
-function toNumber(v: unknown): number | null {
-  return typeof v === 'number' && !Number.isNaN(v) ? v : null;
-}
-
-function hasObsWithLoinc(observations: Array<Record<string, unknown>>, loincCodes: string[]): boolean {
-  return observations.some((o) => {
-    const coding = (o.code as any)?.coding;
-    if (!Array.isArray(coding)) return false;
-    return coding.some((c: any) => c?.system === 'http://loinc.org' && loincCodes.includes(c?.code));
-  });
-}
-
-function getMostRecentIssuedDate(observation: Record<string, unknown>): string | null {
-  const issued = (observation as any)?.issued;
-  return typeof issued === 'string' ? issued : null;
-}
-
-function buildRiskTs(input: CkdRiskPrefetchInput): CkdRiskElmResult {
-  const { patient, conditions, observations } = input;
-
-  const birthDate = (patient as any)?.birthDate;
-  const ageOver60 =
-    typeof birthDate === 'string'
-      ? (() => {
-          const d = new Date(birthDate);
-          if (Number.isNaN(d.getTime())) return null;
-          const now = new Date();
-          let age = now.getFullYear() - d.getFullYear();
-          const m = now.getMonth() - d.getMonth();
-          if (m < 0 || (m === 0 && now.getDate() < d.getDate())) age -= 1;
-          return age > 60;
-        })()
-      : null;
-
-  const condHasCodingFrom = (systems: string[]) =>
-    conditions.some(
-      (c) =>
-        Array.isArray((c.code as any)?.coding) &&
-        (c.code as any).coding.some((cd: any) => systems.includes(cd?.system)),
-    );
-
-  const condMatch = (pred: (cd: any) => boolean) =>
-    conditions.some(
-      (c) =>
-        Array.isArray((c.code as any)?.coding) &&
-        (c.code as any).coding.some((cd: any) => pred(cd)),
-    );
-
-  const icdOrSnomed = ['http://hl7.org/fhir/sid/icd-10-cm', 'http://snomed.info/sct'];
-
-  const hasAnyDxCoding = condHasCodingFrom(icdOrSnomed);
-  const hasDiabetes = !hasAnyDxCoding
-    ? null
-    : condMatch(
-        (cd) =>
-          (cd?.system === 'http://hl7.org/fhir/sid/icd-10-cm' &&
-            typeof cd?.code === 'string' &&
-            (cd.code.startsWith('E10') || cd.code.startsWith('E11'))) ||
-          (cd?.system === 'http://snomed.info/sct' &&
-            typeof cd?.code === 'string' &&
-            (cd.code === '44054006' || cd.code === '73211009')),
-      );
-
-  const hasHypertension = !hasAnyDxCoding
-    ? null
-    : condMatch(
-        (cd) =>
-          (cd?.system === 'http://hl7.org/fhir/sid/icd-10-cm' &&
-            typeof cd?.code === 'string' &&
-            cd.code.startsWith('I10')) ||
-          (cd?.system === 'http://snomed.info/sct' &&
-            typeof cd?.code === 'string' &&
-            cd.code === '38341003'),
-      );
-
-  const hasHeartDisease = !hasAnyDxCoding
-    ? null
-    : condMatch(
-        (cd) =>
-          (cd?.system === 'http://hl7.org/fhir/sid/icd-10-cm' &&
-            typeof cd?.code === 'string' &&
-            (cd.code.startsWith('I25') || cd.code.startsWith('I50'))) ||
-          (cd?.system === 'http://snomed.info/sct' &&
-            typeof cd?.code === 'string' &&
-            (cd.code === '53741008' || cd.code === '84114007')),
-      );
-
-  // BMI ≥ 30 優先；無 BMI 時再看 ICD-10 E66
-  const bmiObs = observations
-    .filter((o) => hasObsWithLoinc([o], ['39156-5']))
-    .slice()
-    .sort((a, b) => (getMostRecentIssuedDate(a) ?? '').localeCompare(getMostRecentIssuedDate(b) ?? ''))
-    .pop();
-  const bmiValue =
-    bmiObs && typeof (bmiObs as any)?.valueQuantity?.value === 'number'
-      ? (bmiObs as any).valueQuantity.value
-      : null;
-
-  const hasObesity =
-    bmiValue != null
-      ? bmiValue >= 30
-      : !conditions.some(
-            (c) =>
-              Array.isArray((c.code as any)?.coding) &&
-              (c.code as any).coding.some((cd: any) => cd?.system === 'http://hl7.org/fhir/sid/icd-10-cm'),
-          )
-        ? null
-        : condMatch(
-            (cd) =>
-              cd?.system === 'http://hl7.org/fhir/sid/icd-10-cm' &&
-              typeof cd?.code === 'string' &&
-              cd.code.startsWith('E66'),
-          );
-
-  const egfrCodes = ['62238-1', '33914-3'];
-  const uacrCodes = ['9318-7', '32294-1'];
-
-  const mostRecentByCodes = (codes: string[]) =>
-    observations
-      .filter((o) => hasObsWithLoinc([o], codes))
-      .slice()
-      .sort((a, b) => (getMostRecentIssuedDate(a) ?? '').localeCompare(getMostRecentIssuedDate(b) ?? ''))
-      .pop();
-
-  const egfrObs = mostRecentByCodes(egfrCodes);
-  const egfrValue = toNumber((egfrObs as any)?.valueQuantity?.value);
-  const egfrUnit = typeof (egfrObs as any)?.valueQuantity?.unit === 'string' ? (egfrObs as any).valueQuantity.unit : null;
-
-  const uacrObs = mostRecentByCodes(uacrCodes);
-  const uacrValue = toNumber((uacrObs as any)?.valueQuantity?.value);
-  const uacrUnit = typeof (uacrObs as any)?.valueQuantity?.unit === 'string' ? (uacrObs as any).valueQuantity.unit : null;
-
-  const missEgfr = egfrObs == null;
-  const missUacr = uacrObs == null;
-
-  return {
-    AgeOver60: ageOver60,
-    HasDiabetes: hasDiabetes,
-    HasHypertension: hasHypertension,
-    HasHeartDisease: hasHeartDisease,
-    HasObesity: hasObesity,
-    HasAkiHistory: null,
-    HasFamilyHistoryOfCKD: null,
-    FamilyHistoryOrAKI: null,
-
-    MostRecentEgfrValue: egfrValue,
-    MostRecentEgfrUnit: egfrUnit,
-    MostRecentUacrValue: uacrValue,
-    MostRecentUacrUnit: uacrUnit,
-
-    MissingeGFR: missEgfr,
-    MissinguACR: missUacr,
-    MissingeGFRRecommendation: missEgfr ? 'eGFR not recorded in past 12 months — order eGFR (blood test)' : null,
-    MissinguACRRecommendation: missUacr ? 'uACR not recorded in past 12 months — order uACR (urine test)' : null,
-  };
-}
+import { extractBundleResources, stripPatientPrefix, getUseElm, formatError } from './utils.js';
 
 function buildComprehensiveTs(risk: CkdRiskElmResult): CkdComprehensiveElmResult {
   const highRisk =
@@ -276,7 +97,7 @@ export async function handleCkdComprehensiveHook(body: CdsHooksRequest): Promise
   const input: CkdRiskPrefetchInput = { patient, conditions, observations, familyHistories };
 
   // 6) 決定用哪個引擎：USE_ELM=true 走 ELM（失敗則 TS_FALLBACK），否則純 TS
-  const useElm = String(process.env.USE_ELM ?? 'false').toLowerCase() === 'true';
+  const useElm = getUseElm();
 
   let engine: 'ELM' | 'TS' | 'TS_FALLBACK' = 'TS';
   let riskResult: CkdRiskElmResult;
@@ -288,15 +109,16 @@ export async function handleCkdComprehensiveHook(body: CdsHooksRequest): Promise
       riskResult = await evaluateCkdRiskWithElm(input);
       comprehensiveResult = await evaluateCkdComprehensiveWithElm(input);
       engine = 'ELM';
-    } catch {
+    } catch (err) {
       // ELM 執行失敗時仍回卡片：降級到 TS，並在卡片 extension 標記 TS_FALLBACK（便於 QA）
-      riskResult = buildRiskTs(input);
+      console.error('[ckd-comprehensive] ELM execution failed, falling back to TS:', formatError(err));
+      riskResult = evaluateCkdRiskWithTs(input);
       comprehensiveResult = buildComprehensiveTs(riskResult);
       engine = 'TS_FALLBACK';
     }
   } else {
     // 未啟用 ELM：用 TS 對齊層（可在未部署/未重編譯 ELM 時使用）
-    riskResult = buildRiskTs(input);
+    riskResult = evaluateCkdRiskWithTs(input);
     comprehensiveResult = buildComprehensiveTs(riskResult);
     engine = 'TS';
   }

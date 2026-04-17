@@ -7,12 +7,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import cql from 'cql-execution';
 import { PatientSource } from 'cql-exec-fhir';
-
-export interface CkdComprehensivePrefetchInput {
-  patient: Record<string, unknown>;
-  conditions: Array<Record<string, unknown>>;
-  observations: Array<Record<string, unknown>>;
-}
+import type { CkdRiskPrefetchInput } from './ckdRiskElmExecutor.js';
 
 export interface CkdComprehensiveElmResult {
   HighRiskProfile: boolean | null;
@@ -22,16 +17,22 @@ export interface CkdComprehensiveElmResult {
   ComprehensiveRiskScore: number | null;
 }
 
+const elmCache = new Map<string, unknown>();
+
 function readElmLibraryFromDisk(elmPath: string): unknown {
+  if (elmCache.has(elmPath)) return elmCache.get(elmPath)!;
   const raw = fs.readFileSync(elmPath, 'utf8');
-  return JSON.parse(raw) as unknown;
+  const parsed = JSON.parse(raw) as unknown;
+  elmCache.set(elmPath, parsed);
+  return parsed;
 }
 
-function buildPatientBundle(input: CkdComprehensivePrefetchInput): Record<string, unknown> {
+function buildPatientBundle(input: CkdRiskPrefetchInput): Record<string, unknown> {
   const entry: Array<{ resource: Record<string, unknown> }> = [];
   entry.push({ resource: input.patient });
   for (const c of input.conditions) entry.push({ resource: c });
   for (const o of input.observations) entry.push({ resource: o });
+  for (const fh of input.familyHistories) entry.push({ resource: fh });
 
   return {
     resourceType: 'Bundle',
@@ -50,7 +51,7 @@ function asNumber(v: unknown): number | null {
 }
 
 export async function evaluateCkdComprehensiveWithElm(
-  input: CkdComprehensivePrefetchInput,
+  input: CkdRiskPrefetchInput,
   options?: { elmPath?: string },
 ): Promise<CkdComprehensiveElmResult> {
   const comprehensiveElmPath =

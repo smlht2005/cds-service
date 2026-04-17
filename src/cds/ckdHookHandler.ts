@@ -48,6 +48,7 @@ import {
   searchObservationsForCkdRisk,
 } from '../fhir/fhirClient.js';
 import { buildCkdRiskCards } from './ckdRiskCardBuilder.js';
+import { extractBundleResources, stripPatientPrefix, getUseElm, formatError } from './utils.js';
 
 /** CDS Hooks 請求（精簡，僅處理本 hook 所需欄位） */
 export interface CdsHooksRequest {
@@ -77,27 +78,6 @@ export interface CdsHooksResponse {
   cards: CdsCard[];
 }
 
-function extractBundleResources(prefetchValue: unknown, expectedType?: string): Array<Record<string, unknown>> {
-  if (!prefetchValue || typeof prefetchValue !== 'object') return [];
-  const obj = prefetchValue as Record<string, unknown>;
-  if (obj.resourceType === 'Bundle') {
-    const entry = (obj.entry as Array<{ resource?: Record<string, unknown> }> | undefined) ?? [];
-    const resources = entry.map((e) => e.resource).filter(Boolean) as Array<Record<string, unknown>>;
-    if (!expectedType) return resources;
-    return resources.filter((r) => r.resourceType === expectedType);
-  }
-  if (obj.resourceType) {
-    if (!expectedType || obj.resourceType === expectedType) return [obj as Record<string, unknown>];
-    return [];
-  }
-  return [];
-}
-
-function stripPatientPrefix(id: string): string {
-  if (id.startsWith('Patient/')) return id.slice('Patient/'.length);
-  return id;
-}
-
 function dedupeByResourceTypeAndId(items: Array<Record<string, unknown>>): Array<Record<string, unknown>> {
   const seen = new Set<string>();
   const out: Array<Record<string, unknown>> = [];
@@ -114,7 +94,29 @@ function dedupeByResourceTypeAndId(items: Array<Record<string, unknown>>): Array
   return out;
 }
 
-function evaluateCkdRiskWithTs(input: CkdRiskPrefetchInput): CkdRiskElmResult {
+function getIssuedString(o: Record<string, unknown>): string {
+  const issued = (o as any).issued;
+  return typeof issued === 'string' ? issued : '';
+}
+
+function mostRecentObsByLoincCodes(
+  observations: Array<Record<string, unknown>>,
+  codes: string[],
+): Record<string, unknown> | undefined {
+  return observations
+    .filter(
+      (o) =>
+        Array.isArray((o.code as any)?.coding) &&
+        (o.code as any).coding.some(
+          (cd: any) => cd?.system === 'http://loinc.org' && codes.includes(cd?.code),
+        ),
+    )
+    .slice()
+    .sort((a, b) => getIssuedString(a).localeCompare(getIssuedString(b)))
+    .pop();
+}
+
+export function evaluateCkdRiskWithTs(input: CkdRiskPrefetchInput): CkdRiskElmResult {
   const { patient, conditions, observations, familyHistories } = input;
 
   const hasAnyCondCoding = (systems: string[]) =>
@@ -173,13 +175,7 @@ function evaluateCkdRiskWithTs(input: CkdRiskPrefetchInput): CkdRiskElmResult {
           (cd?.code === '53741008' || cd?.code === '84114007')),
       );
 
-  const bmiObs = observations.find(
-    (o) =>
-      Array.isArray((o.code as any)?.coding) &&
-      (o.code as any).coding.some(
-        (cd: any) => cd?.system === 'http://loinc.org' && cd?.code === '39156-5',
-      ),
-  );
+  const bmiObs = mostRecentObsByLoincCodes(observations, ['39156-5']);
   const bmiValue =
     typeof (bmiObs as any)?.valueQuantity?.value === 'number'
       ? (bmiObs as any).valueQuantity.value
@@ -199,24 +195,8 @@ function evaluateCkdRiskWithTs(input: CkdRiskPrefetchInput): CkdRiskElmResult {
           );
         })();
 
-  const egfrObs = observations.find(
-    (o) =>
-      Array.isArray((o.code as any)?.coding) &&
-      (o.code as any).coding.some(
-        (cd: any) =>
-          cd?.system === 'http://loinc.org' &&
-          (cd?.code === '62238-1' || cd?.code === '33914-3'),
-      ),
-  );
-  const uacrObs = observations.find(
-    (o) =>
-      Array.isArray((o.code as any)?.coding) &&
-      (o.code as any).coding.some(
-        (cd: any) =>
-          cd?.system === 'http://loinc.org' &&
-          (cd?.code === '9318-7' || cd?.code === '32294-1'),
-      ),
-  );
+  const egfrObs = mostRecentObsByLoincCodes(observations, ['62238-1', '33914-3']);
+  const uacrObs = mostRecentObsByLoincCodes(observations, ['9318-7', '32294-1']);
   const MostRecentEgfrValue =
     typeof (egfrObs as any)?.valueQuantity?.value === 'number'
       ? (egfrObs as any).valueQuantity.value
@@ -342,7 +322,7 @@ export async function handleCkdRiskHook(body: CdsHooksRequest): Promise<CdsHooks
   const familyHistories = (pf as any).familyHistory ? pfFamilyHistory : await searchFamilyMemberHistory(patientId);
 
   // 4) 決定用哪個引擎：USE_ELM=true 走 ELM（失敗則 TS_FALLBACK），否則純 TS
-  const useElm = (process.env.USE_ELM ?? '').toLowerCase() === 'true';
+  const useElm = getUseElm();
   let engine: 'ELM' | 'TS' | 'TS_FALLBACK' = useElm ? 'ELM' : 'TS';
 
   const input: CkdRiskPrefetchInput = { patient, conditions, observations, familyHistories };
@@ -351,8 +331,9 @@ export async function handleCkdRiskHook(body: CdsHooksRequest): Promise<CdsHooks
     ? await (async () => {
         try {
           return await evaluateCkdRiskWithElm(input);
-        } catch {
+        } catch (err) {
           // ELM 執行失敗時仍回卡片：降級到 TS，並在 cards.extension 標記 TS_FALLBACK（便於 QA）
+          console.error('[ckd-risk] ELM execution failed, falling back to TS:', formatError(err));
           engine = 'TS_FALLBACK';
           return evaluateCkdRiskWithTs(input);
         }
