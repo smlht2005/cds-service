@@ -15,6 +15,7 @@ import {
 import { extractEGFRValue } from './cdsServices.js';
 import { evaluateEgfrRecheck } from '../cql/egfrRecheckEvaluation.js';
 import { evaluateEgfrRecheckWithElm } from '../cql/egfrElmExecutor.js';
+import { stripPatientPrefix, getUseElm, formatError } from './utils.js';
 
 export interface CdsHooksRequest {
   hook?: string;
@@ -53,11 +54,6 @@ function firstEntryResource(prefetchValue: unknown): Record<string, unknown> | n
     return obj as Record<string, unknown>;
   }
   return null;
-}
-
-function stripPatientPrefix(id: string): string {
-  if (id.startsWith('Patient/')) return id.slice('Patient/'.length);
-  return id;
 }
 
 export async function handleEgfrCheckHook(body: CdsHooksRequest): Promise<CdsHooksResponse> {
@@ -120,7 +116,7 @@ export async function handleEgfrCheckHook(body: CdsHooksRequest): Promise<CdsHoo
     creaQty != null ? `最新 Creatinine：${creaQty.value ?? '?'} ${creaQty.unit ?? ''}`.trim() : '尚無 Creatinine（2160-0）';
 
   // 6) 決定用哪個引擎：USE_ELM=true 走 ELM（失敗則 TS_FALLBACK），否則純 TS
-  const useElm = (process.env.USE_ELM ?? '').toLowerCase() === 'true';
+  const useElm = getUseElm();
   let engine: 'ELM' | 'TS' | 'TS_FALLBACK' = useElm ? 'ELM' : 'TS';
 
   const recheck = useElm
@@ -131,8 +127,9 @@ export async function handleEgfrCheckHook(body: CdsHooksRequest): Promise<CdsHoo
             latestEgfr: egfr,
             latestCreatinine: crea,
           });
-        } catch {
+        } catch (err) {
           // ELM 執行失敗時仍回卡片：降級到 TS，並在 cards.extension 標記 TS_FALLBACK（便於 QA）
+          console.error('[egfr-check] ELM execution failed, falling back to TS:', formatError(err));
           engine = 'TS_FALLBACK';
           return evaluateEgfrRecheck({
             egfrObservation: egfr,
