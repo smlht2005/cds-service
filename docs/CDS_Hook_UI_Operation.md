@@ -1,4 +1,12 @@
 <!--
+更新時間：2026-04-16 14:59
+作者：CDS Service
+摘要：文件同步：ckd-risk 擴充風險因子（AKI N17* + 家族史 CKD），Prefetch keys 新增 conditionsAll + familyHistory
+
+更新時間：2026-04-16 14:15
+作者：CDS Service
+摘要：文件同步：新增 ckd-comprehensive（第三服務）之操作說明與 Prefetch 鍵（含 latestEgfr）
+
 更新時間：2026-04-16 13:16
 作者：CDS Service
 摘要：第 7 節流程範例補充「ckd-risk 切換 Prefetch 驗證 hybrid」；修正 4.4 誤植之換行字元
@@ -72,7 +80,8 @@
 ### 4.1 CDS 服務（下拉選單）
 
 - **`egfr-check`**：後端依 **病患 ID** 向 FHIR 查詢 eGFR／Creatinine 等，產生摘要與複查建議（邏輯與 `ckd-risk` 分離）。
-- **`ckd-risk`**：**v1 預設 hybrid**（prefetch 建議但可省略）；此 UI 目前仍會**自動**向 FHIR 取得 `Patient`、active `Condition`、`Observation`（指定期間與 LOINC codes），組成 **`prefetch.patient` / `prefetch.conditions` / `prefetch.observations`** 再呼叫 `POST /cds-services/ckd-risk`；若你改為不帶 prefetch，伺服端會自行向 FHIR 取資料補齊。
+- **`ckd-risk`**：**v1 預設 hybrid**（prefetch 建議但可省略）；此 UI 目前會向 FHIR 取得 `Patient`、`Condition`（active + all）、`Observation`，以及 `FamilyMemberHistory`，組成 **`prefetch.patient` / `prefetch.conditions` / `prefetch.conditionsAll` / `prefetch.observations` / `prefetch.familyHistory`** 再呼叫 `POST /cds-services/ckd-risk`；若你改為不帶 prefetch，伺服端會自行向 FHIR 取資料補齊。
+- **`ckd-comprehensive`**：**v1 預設 hybrid**（prefetch 建議但可省略）；在 `ckd-risk` 的風險/缺檢基礎上加入 CPG（NKF）規則（高風險輪廓、年度 uACR、eGFR < 30 轉介、嚴重缺檢與綜合分數）。Prefetch 開啟時會額外帶入 `latestEgfr`（便於除錯/對照）。
 
 ### 4.2 Patient ID（輸入／下拉）
 
@@ -88,9 +97,11 @@
 
 - 此開關會依目前選擇的 **CDS 服務** 決定行為：
   - `egfr-check`：組 `prefetch.patient` + `prefetch.latestEgfr` + `prefetch.latestCreatinine`
-  - `ckd-risk`：組 `prefetch.patient` + `prefetch.conditions` + `prefetch.observations`
+  - `ckd-risk`：組 `prefetch.patient` + `prefetch.conditions` + `prefetch.conditionsAll` + `prefetch.observations` + `prefetch.familyHistory`
+  - `ckd-comprehensive`：組 `prefetch.patient` + `prefetch.conditions` + `prefetch.observations` + `prefetch.latestEgfr`
 - **關閉（egfr-check）**：請求不帶 `prefetch`，後端自行向 FHIR 查 Patient／eGFR／Creatinine。
 - **關閉（ckd-risk）**：請求不帶 `prefetch`，後端以 **hybrid** 模式向 FHIR 取 Patient／Condition／Observation 補齊後再執行規則。
+- **關閉（ckd-comprehensive）**：請求不帶 `prefetch`，後端以 **hybrid** 模式向 FHIR 取 Patient／Condition／Observation 補齊後再執行綜合規則。
 - **開啟**：前端在呼叫 CDS 前，先經 Vite proxy 向 FHIR 取資料並組出與 Discovery 鍵一致的 `prefetch`（較貼近 EHR 實作）。
 
 若 FHIR 請求失敗（例如病患不存在、無法連線），頂部會顯示 **`Prefetch / FHIR failed:`** 並**不會**呼叫 Hook；請檢查病患 ID 與 FHIR 是否可用。
@@ -98,7 +109,8 @@
 開啟時會顯示 Chip（依服務切換）：
 
 - `egfr-check`：**patient · latestEgfr · latestCreatinine**
-- `ckd-risk`：**patient · conditions · observations**
+- `ckd-risk`：**patient · conditions · conditionsAll · observations · familyHistory**
+- `ckd-comprehensive`：**patient · conditions · observations · latestEgfr**
 
 #### 4.4.1 後端 `egfr-check` 如何使用 prefetch
 

@@ -1,4 +1,28 @@
 <!--
+更新時間：2026-04-16 16:46
+作者：CDS Service
+摘要：README.md 補上 CQL→ELM 編譯方式（快速指令），同步更新本檔系統時間戳
+
+更新時間：2026-04-16 16:44
+作者：CDS Service
+摘要：egfr-check / ckd-risk 兩支 hook handler 補強流程註解（可讀性提升；不影響行為），同步更新本檔系統時間戳
+
+更新時間：2026-04-16 16:41
+作者：CDS Service
+摘要：補強 ckdComprehensiveHookHandler 的邏輯註解（可讀性提升；不影響行為），同步更新本檔系統時間戳
+
+更新時間：2026-04-16 15:21
+作者：CDS Service
+摘要：frontend Patient 下拉清單加入 patient-ckd-107（方便驗證 ckd-risk 新增的家族史/AKI warning）
+
+更新時間：2026-04-16 15:07
+作者：CDS Service
+摘要：ckd-risk 就地升級：新增 AKI（N17*）與家族史 CKD（FamilyMemberHistory + SNOMED 709044004）風險因子與 warning；Discovery/prefetch 同步擴充
+
+更新時間：2026-04-16 14:15
+作者：CDS Service
+摘要：新增 ckd-comprehensive（第三服務）：CQL/ELM（CKD_Comprehensive）、後端端點與前端 UI；補上 CPG 文件連結
+
 更新時間：2026-04-16 13:27
 作者：CDS Service
 摘要：新增專案根目錄 README.md（快速導覽）；本檔標題下加入 README 連結；詳盡操作仍以本檔為主
@@ -142,7 +166,7 @@
 
 ## 系統日期時間（建置／文件更新時請一併更新本段與檔案頂部歷史）
 
-- **記錄時間**：2026-04-16 13:27（台灣本機時區 UTC+8；PowerShell `Get-Date -Format \"yyyy/MM/dd HH:mm:ss.fff\"`：2026/04/16 13:27:20.087）
+- **記錄時間**：2026-04-16 16:46（台灣本機時區 UTC+8；cmd `echo %date% %time%`：2026/04/16 16:46）
 
 ## 需求
 
@@ -185,9 +209,9 @@ npm run test:fhir
    - 資料夾：01 Import（transaction Bundles）、02 Query（GET/SEARCH）  
    - 變數：`fhirBaseUrl`（預設 `http://localhost:9090/fhir`）
 
-## Frontend（patient-view eGFR UI）
+## Frontend（patient-view CDS Hooks UI）
 
-獨立前端 UI（Vite + React + MUI），用來模擬 EHR 的 **patient-view** 情境：選取病患後自動呼叫 CDS Service（預設 `egfr-check`），並以 UI 顯示檢驗摘要/建議 cards 與 `RuleEngine` extension。
+獨立前端 UI（Vite + React + MUI），用來模擬 EHR 的 **patient-view** 情境：選取病患後呼叫 CDS Service（`egfr-check`／`ckd-risk`／`ckd-comprehensive`），並以 UI 顯示 cards 與 `RuleEngine` extension。
 
 - **操作說明（控制列、Request／輸出區、ckd-risk 與 egfr-check、`Prefetch from FHIR`）**：[`docs/CDS_Hook_UI_Operation.md`](docs/CDS_Hook_UI_Operation.md)
 
@@ -201,9 +225,10 @@ npm run dev
 
 ## CDS Hooks
 
-- **Discovery**：`GET http://localhost:3000/cds-services`（回傳 `egfr-check` 與 `ckd-risk` 兩項服務，`prefetch` 使用 `{{context.patientId}}` 範本）
+- **Discovery**：`GET http://localhost:3000/cds-services`（回傳 `egfr-check`、`ckd-risk`、`ckd-comprehensive` 三項服務，`prefetch` 使用 `{{context.patientId}}` 範本）
 - **eGFR Hook（步驟二）**：`POST http://localhost:3000/cds-services/egfr-check`
-- **CKD Hook**：`POST http://localhost:3000/cds-services/ckd-risk`（**CKD 規則集合 v1**：Risk flags + eGFR/uACR missing reminders；**prefetch-only**）  
+- **CKD Hook**：`POST http://localhost:3000/cds-services/ckd-risk`（**CKD 規則集合 v1**：Risk flags + eGFR/uACR missing reminders；**hybrid**：prefetch 可省略，伺服端向 FHIR 補齊）  
+- **CKD Comprehensive Hook**：`POST http://localhost:3000/cds-services/ckd-comprehensive`（**CPG + Risk + Testing**；**hybrid**：prefetch 可省略，伺服端向 FHIR 補齊）
   Body 範例（JSON）：
 
 ```json
@@ -220,7 +245,7 @@ npm run dev
 | `FHIR_BASE_URL` | `http://localhost:9090/fhir` | HAPI FHIR base URL |
 | `CDS_PUBLIC_BASE_URL` | `http://localhost:3000` | Discovery 中 `href` 的公開基底（勿尾隨 `/`） |
 | `CDS_GUIDELINE_URL` | `https://example.org/guidelines` | 複查 warning 卡 `source.url`（可改為院內指引） |
-| `USE_ELM` | `false` | 是否改用 **ELM 引擎**（`cql-execution` + `cql-exec-fhir`）執行 `elm/EGFR_Check.json`（egfr-check）與 `elm/CKD_Risk.json`（ckd-risk）；失敗會標記 `TS_FALLBACK` |
+| `USE_ELM` | `false` | 是否改用 **ELM 引擎**（`cql-execution` + `cql-exec-fhir`）執行 `elm/EGFR_Check.json`（egfr-check）、`elm/CKD_Risk.json`（ckd-risk）與 `elm/CKD_Comprehensive.json`（ckd-comprehensive）；失敗會標記 `TS_FALLBACK` |
 | `PORT` | `3000` | HTTP 埠 |
 | `HOST` | `0.0.0.0` | 綁定位址 |
 
@@ -248,6 +273,8 @@ npm start
 - [`docs/qa/README.md`](docs/qa/README.md) — **CQL／ELM／UCUM QA 紀錄**（問題排查、驗證清單、Maven 重編譯）
 - [`docs/qa/ui_operation_qa.md`](docs/qa/ui_operation_qa.md) — **CDS Hook UI 操作／Prefetch 開關詳細 QA**
 - [`docs/CDS_Hook_UI_Operation.md`](docs/CDS_Hook_UI_Operation.md) — **CDS Hook 前端 UI 操作說明**（patient-view、prefetch、RuleEngine）
+- [`docs/CPG/README-ckd-comprehensive.md`](docs/CPG/README-ckd-comprehensive.md) — **ckd-comprehensive 服務說明**（規則表、ELM 載入、null 原則）
+- [`docs/CPG/CKD_Comprehensive_Implementation_Plan.md`](docs/CPG/CKD_Comprehensive_Implementation_Plan.md) — **ckd-comprehensive 實作計畫**（含 critical thinking checklist）
 
 ## 階段三：CQL（eGFR 複查）
 

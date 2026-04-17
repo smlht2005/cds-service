@@ -55,9 +55,14 @@ function normalizeEgfrObservationForElm(
   };
 }
 
+const elmCache = new Map<string, unknown>();
+
 function readElmLibraryFromDisk(elmPath: string): unknown {
+  if (elmCache.has(elmPath)) return elmCache.get(elmPath)!;
   const raw = fs.readFileSync(elmPath, 'utf8');
-  return JSON.parse(raw) as unknown;
+  const parsed = JSON.parse(raw) as unknown;
+  elmCache.set(elmPath, parsed);
+  return parsed;
 }
 
 function buildPatientBundle(input: EgfrElmEvaluationInput): Record<string, unknown> {

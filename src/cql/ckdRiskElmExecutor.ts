@@ -1,4 +1,8 @@
 /*
+ * 更新時間：2026-04-16 14:59
+ * 作者：CDS Service
+ * 摘要：CKD_Risk ELM executor 支援 AKI 病史（N17*）與家族史 CKD（FamilyMemberHistory + SNOMED 709044004）；bundle 納入 FamilyMemberHistory
+ *
  * 更新時間：2026-04-15 17:50
  * 作者：CDS Service
  * 摘要：以 cql-execution + cql-exec-fhir 執行 elm/CKD_Risk.json（flags + reminders + most-recent values），供 ckd-risk cards 組裝
@@ -14,6 +18,7 @@ export interface CkdRiskPrefetchInput {
   patient: Record<string, unknown>;
   conditions: Array<Record<string, unknown>>;
   observations: Array<Record<string, unknown>>;
+  familyHistories: Array<Record<string, unknown>>;
 }
 
 export interface CkdRiskElmResult {
@@ -23,7 +28,9 @@ export interface CkdRiskElmResult {
   HasHypertension: boolean | null;
   HasHeartDisease: boolean | null;
   HasObesity: boolean | null;
-  FamilyHistoryOrAKI: null;
+  HasAkiHistory: boolean | null;
+  HasFamilyHistoryOfCKD: boolean | null;
+  FamilyHistoryOrAKI: boolean | null;
 
   // most recent values
   MostRecentEgfrValue: number | null;
@@ -38,9 +45,14 @@ export interface CkdRiskElmResult {
   MissinguACRRecommendation: string | null;
 }
 
+const elmCache = new Map<string, unknown>();
+
 function readElmLibraryFromDisk(elmPath: string): unknown {
+  if (elmCache.has(elmPath)) return elmCache.get(elmPath)!;
   const raw = fs.readFileSync(elmPath, 'utf8');
-  return JSON.parse(raw) as unknown;
+  const parsed = JSON.parse(raw) as unknown;
+  elmCache.set(elmPath, parsed);
+  return parsed;
 }
 
 function buildPatientBundle(input: CkdRiskPrefetchInput): Record<string, unknown> {
@@ -48,6 +60,7 @@ function buildPatientBundle(input: CkdRiskPrefetchInput): Record<string, unknown
   entry.push({ resource: input.patient });
   for (const c of input.conditions) entry.push({ resource: c });
   for (const o of input.observations) entry.push({ resource: o });
+  for (const fh of input.familyHistories) entry.push({ resource: fh });
 
   return {
     resourceType: 'Bundle',
@@ -109,7 +122,9 @@ export async function evaluateCkdRiskWithElm(
     HasHypertension: asBooleanOrNull(exprs?.['HasHypertension']),
     HasHeartDisease: asBooleanOrNull(exprs?.['HasHeartDisease']),
     HasObesity: asBooleanOrNull(exprs?.['HasObesity']),
-    FamilyHistoryOrAKI: null,
+    HasAkiHistory: asBooleanOrNull(exprs?.['HasAkiHistory']),
+    HasFamilyHistoryOfCKD: asBooleanOrNull(exprs?.['HasFamilyHistoryOfCKD']),
+    FamilyHistoryOrAKI: asBooleanOrNull(exprs?.['FamilyHistoryOrAKI']),
 
     MostRecentEgfrValue: asNumber(exprs?.['MostRecentEgfrValue']),
     MostRecentEgfrUnit: asString(exprs?.['MostRecentEgfrUnit']),

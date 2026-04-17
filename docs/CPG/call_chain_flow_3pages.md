@@ -1,0 +1,51 @@
+---
+title: Call chain flow (3 pages)
+---
+
+```mermaid
+%%{init: {"theme":"default","themeVariables":{"fontSize":"20px"}}}%%
+flowchart LR
+  User[User_UI] --> UI[Frontend_UI_frontend/src/App.tsx]
+
+  subgraph frontend [Frontend_Vite_Dev_Server]
+    UI -->|toggle_Prefetch_ON| Prefetch[frontend/src/api/fhirClient.ts]
+    UI -->|callHook| CdsClient[frontend/src/api/cdsClient.ts]
+  end
+```
+
+```mermaid
+%%{init: {"theme":"default","themeVariables":{"fontSize":"20px"}}}%%
+flowchart LR
+  subgraph proxy [Vite_Proxy]
+    Prefetch[frontend_prefetch] -->|GET_/fhir/...| FhirProxy[/vite_proxy_/fhir/]
+    CdsClient[frontend_callHook] -->|"POST_/cds-services/{serviceId}"| CdsProxy[/vite_proxy_/cds-services/]
+  end
+
+  FhirProxy --> FHIR[HAPI_FHIR_Server_FHIR_BASE_URL]
+  CdsProxy --> CDS[CDS_Service_Fastify_src/server.ts]
+```
+
+```mermaid
+%%{init: {"theme":"default","themeVariables":{"fontSize":"20px"}}}%%
+flowchart LR
+  CDS[CDS_Service_Fastify_src/server.ts] --> Routes[src/cds/routes.ts]
+  Routes -->|egfr-check| EgfrHandler[src/cds/egfrCheckHookHandler.ts]
+  Routes -->|ckd-risk| CkdRiskHandler[src/cds/ckdHookHandler.ts]
+  Routes -->|ckd-comprehensive| CkdCompHandler[src/cds/ckdComprehensiveHookHandler.ts]
+
+  EgfrHandler -->|USE_ELM=true| EgfrElm[src/cql/egfrElmExecutor.ts]
+  CkdRiskHandler -->|USE_ELM=true| CkdRiskElm[src/cql/ckdRiskElmExecutor.ts]
+  CkdCompHandler -->|USE_ELM=true| CkdCompElm[src/cql/ckdComprehensiveElmExecutor.ts]
+
+  EgfrHandler -->|Prefetch_OFF_or_missing| FhirClient[src/fhir/fhirClient.ts]
+  CkdRiskHandler -->|Prefetch_OFF_or_missing| FhirClient
+  CkdCompHandler -->|Prefetch_OFF_or_missing| FhirClient
+
+  CkdRiskHandler --> CardsRisk[src/cds/ckdRiskCardBuilder.ts]
+  CkdCompHandler --> CardsComp[src/cds/ckdComprehensiveCardBuilder.ts]
+
+  CardsRisk --> Response[CDS_Hooks_Response_cards]
+  CardsComp --> Response
+  EgfrHandler --> Response
+```
+

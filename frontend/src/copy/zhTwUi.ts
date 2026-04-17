@@ -1,4 +1,8 @@
 /*
+ * 更新時間：2026-04-16 14:12
+ * 作者：CDS Service
+ * 摘要：UI 文案補上 ckd-comprehensive（第三服務）與其 Prefetch/Discovery 鍵說明
+ *
  * 更新時間：2026-04-16 10:15
  * 作者：CDS Service
  * 摘要：CDS Hook UI 繁體中文（zh-TW）標題說明與欄位 Tooltip 文案
@@ -19,13 +23,15 @@ export const TT = {
 
   /** CDS 服務 */
   cdsService:
-    '選擇要測試的 CDS 服務：egfr-check（eGFR 複查建議）或 ckd-risk（CKD 風險與檢驗提醒；hybrid：prefetch 建議但可省略）。',
+    '選擇要測試的 CDS 服務：egfr-check（eGFR 複查建議）、ckd-risk（CKD 風險與檢驗提醒；hybrid）或 ckd-comprehensive（CKD 綜合規則：CPG + risk + testing；hybrid）。',
 
   /** 服務說明（顯示於 UI） */
   serviceExplainEgfr:
     'egfr-check：偵測最新 eGFR，若低於門檻則提供複查建議。可選擇是否由前端先組 prefetch（EHR 模式）或讓後端自行查 FHIR。',
   serviceExplainCkd:
     'ckd-risk：彙整 CKD 風險因子與檢測缺漏提醒。hybrid：可不帶 prefetch（後端會向 FHIR 取資料），也可由前端先組 prefetch（更貼近 EHR）。',
+  serviceExplainCkdComprehensive:
+    'ckd-comprehensive：整合 ckd-risk 既有風險/缺檢偵測，並加入 CPG（NKF）規則：高風險輪廓、年度 uACR、eGFR < 30 轉介、嚴重缺檢與綜合分數。hybrid：prefetch 可省略。',
 
   /** Patient ID */
   patientId:
@@ -41,7 +47,7 @@ export const TT = {
 
   /** Prefetch ckd-risk */
   prefetchCkd:
-    '適用 ckd-risk：開啟時前端會先向 FHIR 取得 Patient/Condition/Observation 組成 prefetch（較貼近 EHR 實作）；關閉時只送 patientId，由 CDS 後端以 hybrid 模式向 FHIR 取資料補齊。',
+    '適用 ckd-risk / ckd-comprehensive：開啟時前端會先向 FHIR 取得 Patient/Condition/Observation（ckd-comprehensive 另加 latestEgfr）組成 prefetch（較貼近 EHR 實作）；關閉時只送 patientId，由 CDS 後端以 hybrid 模式向 FHIR 取資料補齊。',
 
   /** Discovery 鍵 Chip */
   discoveryKeysChip:
@@ -49,7 +55,11 @@ export const TT = {
 
   /** CKD Discovery 鍵 Chip */
   discoveryKeysChipCkd:
-    '本次請求將帶入 prefetch 欄位：patient、conditions、observations（searchset Bundles），供 ckd-risk 優先使用；若不帶 prefetch，後端會自行向 FHIR 取資料。',
+    '本次請求將帶入 prefetch 欄位：patient、conditions、conditionsAll、observations、familyHistory（searchset Bundles），供 ckd-risk 優先使用；若不帶 prefetch，後端會自行向 FHIR 取資料。',
+
+  /** CKD Comprehensive Discovery 鍵 Chip */
+  discoveryKeysChipCkdComprehensive:
+    '本次請求將帶入 prefetch 欄位：patient、conditions、observations、latestEgfr，供 ckd-comprehensive 優先使用；若不帶 prefetch，後端會自行向 FHIR 取資料（hybrid）。',
 
   /** 重新載入 Discovery */
   reloadDiscovery:

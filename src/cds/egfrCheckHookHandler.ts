@@ -1,4 +1,8 @@
 /*
+ * 更新時間：2026-04-16 16:44
+ * 作者：CDS Service
+ * 摘要：補強 handleEgfrCheckHook 可讀性註解（prefetch/hybrid 取數、USE_ELM 分支與 fallback；不影響行為）
+ *
  * 更新時間：2026-04-15 17:50
  * 作者：CDS Service
  * 摘要：保留 egfr-check 既有行為（原 handleCkdRiskHook 實作抽出），避免 ckd-risk 擴充影響 egfr-check
@@ -11,6 +15,7 @@ import {
 import { extractEGFRValue } from './cdsServices.js';
 import { evaluateEgfrRecheck } from '../cql/egfrRecheckEvaluation.js';
 import { evaluateEgfrRecheckWithElm } from '../cql/egfrElmExecutor.js';
+import { stripPatientPrefix, getUseElm, formatError } from './utils.js';
 
 export interface CdsHooksRequest {
   hook?: string;
@@ -51,12 +56,8 @@ function firstEntryResource(prefetchValue: unknown): Record<string, unknown> | n
   return null;
 }
 
-function stripPatientPrefix(id: string): string {
-  if (id.startsWith('Patient/')) return id.slice('Patient/'.length);
-  return id;
-}
-
 export async function handleEgfrCheckHook(body: CdsHooksRequest): Promise<CdsHooksResponse> {
+  // 1) 取得 patientId（CDS Hooks context 可能是 "Patient/{id}" 或 "{id}"）
   const rawId = body.context?.patientId;
   if (!rawId) {
     return {
@@ -72,6 +73,7 @@ export async function handleEgfrCheckHook(body: CdsHooksRequest): Promise<CdsHoo
 
   const patientId = stripPatientPrefix(rawId);
 
+  // 2) Prefetch（hybrid）：patient 允許從 prefetch 取得；缺少時再向 FHIR 取
   let patient: Record<string, unknown> | null = null;
   const pfPatient = body.prefetch?.patient;
   if (pfPatient) {
@@ -81,9 +83,11 @@ export async function handleEgfrCheckHook(body: CdsHooksRequest): Promise<CdsHoo
     patient = await getPatient(patientId);
   }
 
+  // 3) Prefetch（hybrid）：latestEgfr/latestCreatinine 若有就用；沒有才向 FHIR 取最新 Observation
   let egfr = body.prefetch?.latestEgfr ? firstEntryResource(body.prefetch.latestEgfr) : null;
   let crea = body.prefetch?.latestCreatinine ? firstEntryResource(body.prefetch.latestCreatinine) : null;
 
+  // 4) extractEGFRValue 支援「prefetch 只帶數值」的情境（Observation 未完整載入時仍可判斷規則）
   const prefetchEgfrNumber = extractEGFRValue(body.prefetch ?? {});
 
   if (!egfr) {
@@ -93,6 +97,7 @@ export async function handleEgfrCheckHook(body: CdsHooksRequest): Promise<CdsHoo
     crea = (await getLatestCreatinine(patientId)) as Record<string, unknown> | null;
   }
 
+  // 5) 產生 summary/detail 顯示用文字（不影響 rule 判斷）
   const name = Array.isArray(patient.name) ? (patient.name[0] as { family?: string; given?: string[] }) : undefined;
   const label =
     name?.family || (name?.given && name.given[0])
@@ -110,7 +115,8 @@ export async function handleEgfrCheckHook(body: CdsHooksRequest): Promise<CdsHoo
   const creaLine =
     creaQty != null ? `最新 Creatinine：${creaQty.value ?? '?'} ${creaQty.unit ?? ''}`.trim() : '尚無 Creatinine（2160-0）';
 
-  const useElm = (process.env.USE_ELM ?? '').toLowerCase() === 'true';
+  // 6) 決定用哪個引擎：USE_ELM=true 走 ELM（失敗則 TS_FALLBACK），否則純 TS
+  const useElm = getUseElm();
   let engine: 'ELM' | 'TS' | 'TS_FALLBACK' = useElm ? 'ELM' : 'TS';
 
   const recheck = useElm
@@ -121,7 +127,9 @@ export async function handleEgfrCheckHook(body: CdsHooksRequest): Promise<CdsHoo
             latestEgfr: egfr,
             latestCreatinine: crea,
           });
-        } catch {
+        } catch (err) {
+          // ELM 執行失敗時仍回卡片：降級到 TS，並在 cards.extension 標記 TS_FALLBACK（便於 QA）
+          console.error('[egfr-check] ELM execution failed, falling back to TS:', formatError(err));
           engine = 'TS_FALLBACK';
           return evaluateEgfrRecheck({
             egfrObservation: egfr,
@@ -134,8 +142,10 @@ export async function handleEgfrCheckHook(body: CdsHooksRequest): Promise<CdsHoo
         prefetchEgfrNumber: prefetchEgfrNumber,
       });
 
+  // 7) 將引擎標記放入 cards.extension（便於 UI/Postman/QA 確認是否真跑 ELM）
   const engineExtension = [{ url: 'urn:cds-service:rule-engine', valueString: engine }];
 
+  // 8) 先回 info 摘要卡（顯示最新 eGFR/Creatinine 狀態），需要複查時再加 warning 卡（含指引與檢驗歷史 links）
   const cards: CdsCard[] = [
     {
       uuid: 'ckd-risk-summary',
