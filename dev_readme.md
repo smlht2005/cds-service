@@ -1,4 +1,20 @@
 <!--
+更新時間：2026-04-17 10:54
+作者：CDS Service
+摘要：docs/git/fetch與pull簡明說明與QA.md 補充 credential.helper（manager）實務摘要與 Q11–Q14；同步更新本檔系統時間戳
+
+更新時間：2026-04-17 10:42
+作者：CDS Service
+摘要：docs/git/fetch與pull簡明說明與QA.md 補充 git stash 段落與 Q&A；同步更新本檔系統時間戳
+
+更新時間：2026-04-17 10:33
+作者：CDS Service
+摘要：新增 docs/git/fetch與pull簡明說明與QA.md（fetch／pull 生活化比喻與結論式 Q&A）；同步更新本檔系統時間戳
+
+更新時間：2026-04-17 10:14
+作者：CDS Service
+摘要：新增 docs/emergence/新cds_server研究規劃.md（自 Cursor 規劃檔同步，供急診 CDS server follow-up）；同步更新本檔系統時間戳
+
 更新時間：2026-04-16 16:46
 作者：CDS Service
 摘要：README.md 補上 CQL→ELM 編譯方式（快速指令），同步更新本檔系統時間戳
@@ -166,7 +182,7 @@
 
 ## 系統日期時間（建置／文件更新時請一併更新本段與檔案頂部歷史）
 
-- **記錄時間**：2026-04-16 16:46（台灣本機時區 UTC+8；cmd `echo %date% %time%`：2026/04/16 16:46）
+- **記錄時間**：2026-04-17 10:54（台灣本機時區 UTC+8；cmd `echo %date% %time%`：2026/04/17 10:54:52.09）
 
 ## 需求
 
@@ -275,6 +291,8 @@ npm start
 - [`docs/CDS_Hook_UI_Operation.md`](docs/CDS_Hook_UI_Operation.md) — **CDS Hook 前端 UI 操作說明**（patient-view、prefetch、RuleEngine）
 - [`docs/CPG/README-ckd-comprehensive.md`](docs/CPG/README-ckd-comprehensive.md) — **ckd-comprehensive 服務說明**（規則表、ELM 載入、null 原則）
 - [`docs/CPG/CKD_Comprehensive_Implementation_Plan.md`](docs/CPG/CKD_Comprehensive_Implementation_Plan.md) — **ckd-comprehensive 實作計畫**（含 critical thinking checklist）
+- [`docs/emergence/新cds_server研究規劃.md`](docs/emergence/新cds_server研究規劃.md) — **急診 CDS server 研究規劃 follow-up**（獨立 server 方案 A／既有 server 方案 B、待確認事項）
+- [`docs/git/fetch與pull簡明說明與QA.md`](docs/git/fetch與pull簡明說明與QA.md) — **Git fetch／pull 簡明比喻與 Q&A**（對齊遠端前速查）
 
 ## 階段三：CQL（eGFR 複查）
 
