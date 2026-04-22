@@ -207,19 +207,9 @@ define "TbSecondLineMedCount":
     + Count([MedicationStatement: medication in "TB-Meds-SecondLine"])
 
 /*
- * 安全性監測：取 TB-Lab-Monitoring 值集中各指標最後一筆。
- * 備註：tb-lab-monitoring 使用 NHI 醫令代碼（09026C/09025C/09015C/08011C/09029C），
- *       現場 Observation 也可能為 LOINC；TS 對齊層比對 coding 所有 system。
- */
-define "LatestSafetyLabs":
-  Last(
-    [Observation: "TB-Lab-Monitoring"] O
-      sort by effective
-  )
-
-/*
  * 安全性監測：落入 TB-Lab-Monitoring ValueSet 的 Observation 筆數（供 ELM 校驗用）。
- * per-code 最新值（ALT/Cr/CBC/AST/T-Bil）的分組與顯示由 handler 於 TS 側組裝。
+ * per-code 最新值（ALT/Cr/CBC/AST/T-Bil）的分組與顯示由 handler 於 TS 側組裝，
+ * 故不在 CQL 提供 LatestSafetyLabs define（PR #3 Issue 6 方案B：移除無用 define）。
  */
 define "TbLabObservationCount":
   Count([Observation: "TB-Lab-Monitoring"])

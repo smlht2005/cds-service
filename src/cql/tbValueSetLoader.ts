@@ -1,4 +1,12 @@
 /*
+ * 更新時間：2026-04-22 14:00
+ * 作者：CDS Service
+ * 摘要：PR #3 Copilot review：
+ *       1. TB_VALUESET_URLS 改讀 TB_VALUESET_BASE_URL env var（預設 https://fhir.your-hosp.org.tw），
+ *          消除硬編碼 canonical URL 前綴。
+ *       2. flattenCodings 遞迴改為只走訪已知 CodeableConcept 路徑（一層深度），
+ *          避免遞迴進入 contained / extension / meta 造成誤判。
+ *
  * 更新時間：2026-04-22 10:10
  * 作者：CDS Service
  * 摘要：TbValueSetEntry 新增 rawConcepts（保留原始 system/code 字面值，不做大小寫／去點號正規化），
@@ -42,11 +50,14 @@ export interface TbValueSetEntry {
   rawConcepts: Array<{ system?: string; code: string }>;
 }
 
+const TB_VALUESET_BASE =
+  (process.env.TB_VALUESET_BASE_URL ?? 'https://fhir.your-hosp.org.tw').replace(/\/$/, '');
+
 const TB_VALUESET_URLS = {
-  diagnoses: 'https://fhir.your-hosp.org.tw/ValueSet/tb-diagnoses',
-  medsFirstLine: 'https://fhir.your-hosp.org.tw/ValueSet/tb-meds-firstline',
-  medsSecondLine: 'https://fhir.your-hosp.org.tw/ValueSet/tb-meds-secondline',
-  labMonitoring: 'https://fhir.your-hosp.org.tw/ValueSet/tb-lab-monitoring',
+  diagnoses: `${TB_VALUESET_BASE}/ValueSet/tb-diagnoses`,
+  medsFirstLine: `${TB_VALUESET_BASE}/ValueSet/tb-meds-firstline`,
+  medsSecondLine: `${TB_VALUESET_BASE}/ValueSet/tb-meds-secondline`,
+  labMonitoring: `${TB_VALUESET_BASE}/ValueSet/tb-lab-monitoring`,
 } as const;
 
 export type TbValueSetKey = keyof typeof TB_VALUESET_URLS;
@@ -143,27 +154,46 @@ export function getTbValueSet(key: TbValueSetKey): TbValueSetEntry {
 }
 
 /**
- * 將 FHIR 物件中的 coding 陣列扁平化（會走 CodeableConcept.coding 與 medication.coding）。
+ * 將 FHIR 物件中的 coding 陣列扁平化。
+ *
+ * 只走訪已知的 CodeableConcept 路徑（最多一層深度），
+ * 不遞迴進入 contained、extension、meta 等巢狀結構，
+ * 以避免因深度遞迴而誤判非業務欄位中的 coding 物件。
+ *
+ * 支援的路徑：
+ *  - obj.coding           (直接 CodeableConcept)
+ *  - obj.code.coding      (Condition / MedicationRequest.code)
+ *  - obj.medication.coding (MedicationRequest.medication[x])
+ *  - obj.medicationCodeableConcept.coding
+ *  - obj.vaccineCode.coding (Immunization)
  */
 export function flattenCodings(obj: unknown): Array<{ system?: string; code?: string }> {
   if (!obj || typeof obj !== 'object') return [];
+  const root = obj as Record<string, unknown>;
   const out: Array<{ system?: string; code?: string }> = [];
-  const walk = (node: unknown) => {
-    if (!node || typeof node !== 'object') return;
-    const n = node as Record<string, unknown>;
-    if (Array.isArray(n.coding)) {
-      for (const c of n.coding) {
-        if (c && typeof c === 'object') {
-          const cc = c as { system?: string; code?: string };
-          out.push({ system: cc.system, code: cc.code });
-        }
+
+  const extractFromCoding = (codingArr: unknown) => {
+    if (!Array.isArray(codingArr)) return;
+    for (const c of codingArr) {
+      if (c && typeof c === 'object') {
+        const cc = c as { system?: string; code?: string };
+        out.push({ system: cc.system, code: cc.code });
       }
     }
-    for (const v of Object.values(n)) {
-      if (v && typeof v === 'object') walk(v);
-    }
   };
-  walk(obj);
+
+  // 直接 CodeableConcept（obj 本身就是 CodeableConcept）
+  extractFromCoding(root.coding);
+
+  // 一層深度已知欄位
+  const knownFields = ['code', 'medication', 'medicationCodeableConcept', 'vaccineCode'];
+  for (const field of knownFields) {
+    const child = root[field];
+    if (child && typeof child === 'object') {
+      extractFromCoding((child as Record<string, unknown>).coding);
+    }
+  }
+
   return out;
 }
 

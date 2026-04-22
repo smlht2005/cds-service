@@ -1,4 +1,8 @@
 /*
+ * 更新時間：2026-04-22 14:00
+ * 作者：CDS Service
+ * 摘要：PR #3 Copilot review：export createFhirInstance，供 tbFhirClient.ts 共用工廠，消除重複定義。
+ *
  * 更新時間：2026-04-20 10:05
  * 作者：CDS Service
  * 摘要：searchFlagsForPatient 移除 Flag?status=（HAPI 不支援）；改由呼叫端依 resource.status 過濾 active
@@ -30,8 +34,9 @@ const defaultBaseUrl = process.env.FHIR_BASE_URL ?? 'http://localhost:9090/fhir'
 /**
  * 初始化 FHIR Axios 實例
  * 配置本機 HAPI FHIR 的連線參數（可透過 FHIR_BASE_URL 覆寫）
+ * 匯出供其他模組（如 tbFhirClient）共用，避免重複定義。
  */
-function createFhirInstance(baseURL: string): AxiosInstance {
+export function createFhirInstance(baseURL: string): AxiosInstance {
   return axios.create({
     baseURL,
     timeout: 10_000,

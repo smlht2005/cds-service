@@ -1,4 +1,17 @@
 <!--
+更新時間：2026-04-22 17:37
+作者：CDS Service
+摘要：PR #3 Copilot review 全數修正（Issue 1～8）：
+      1. ELM reasons 計數改用 elmSummary.tbDiagnosisCount / tbFirstLineMedCount / tbSecondLineMedCount。
+      2. flattenCodings 遞迴改為已知 CodeableConcept 路徑一層深度（停止走訪 contained/extension/meta）。
+      3. CdsHooksPrefetch 介面新增 observations/conditions/flags 等常用鍵，移除 unsafe cast。
+      4. fhirClient.ts export createFhirInstance，tbFhirClient.ts 改為 import，消除重複工廠。
+      5. tbValueSetLoader.ts 改讀 TB_VALUESET_BASE_URL env var，.env.example 補此項目。
+      6. Issue 6 方案B：Emergency_TB_Detection.cql 移除 LatestSafetyLabs define，Maven 重編 ELM（BUILD SUCCESS）。
+      7. countSignals 呼叫前加 inline comment 說明 ELM mode 下 TS 計數語意。
+      8. App.tsx patientOptions 補入 patient-tb-001~015 系列。
+      TS build 綠燈；lint 0 錯誤；case-14~28 驗收 15/15 PASS（USE_ELM=true）。
+
 更新時間：2026-04-22 13:24
 作者：CDS Service
 摘要：TB Detection 完整測試計畫（test-plan.md）建立並全數通過（case-14～28，15/15 PASS，USE_ELM=true）。

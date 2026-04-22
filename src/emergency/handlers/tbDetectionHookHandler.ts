@@ -1,4 +1,13 @@
 /*
+ * 更新時間：2026-04-22 14:00
+ * 作者：CDS Service
+ * 摘要：PR #3 Copilot review 修正：
+ *       1. ELM reasons 計數改用 elmSummary.tbDiagnosisCount / tbFirstLineMedCount / tbSecondLineMedCount
+ *          （避免 TS signals 為 0 時顯示空字串）。
+ *       2. prefetch 的 `(pf as Record<string, unknown>).observations` unsafe cast 移除
+ *          （改讀型別安全的 pf.observations）。
+ *       3. countSignals 前補充 inline comment 說明 ELM mode 下 TS 計數語意。
+ *
  * 更新時間：2026-04-22 11:35
  * 作者：CDS Service
  * 摘要：Test-plan 修正（3 個邊界情境失敗）：
@@ -276,17 +285,17 @@ function buildTbDetectionCards(
   if (elmSummary) {
     const elmReasons: string[] = [];
     if (elmSummary.hasActiveTbDiagnosis)
-      elmReasons.push(`活動性結核診斷（A15–A19／Z16.34）${s.activeTbDx || ''}筆（ELM 確認）`);
+      elmReasons.push(`活動性結核診斷（A15–A19／Z16.34）${elmSummary.tbDiagnosisCount} 筆（ELM 確認）`);
     if (elmSummary.hasLatentTbDiagnosis)
-      elmReasons.push(`潛伏結核感染（R76.1）${s.latentTbDx || ''}筆（ELM 確認）`);
+      elmReasons.push(`潛伏結核感染（R76.1）${s.latentTbDx} 筆（ELM 確認）`);
     if (elmSummary.isTbContact)
-      elmReasons.push(`結核接觸者（Z20.1）${s.contactTbDx || ''}筆（ELM 確認）`);
+      elmReasons.push(`結核接觸者（Z20.1）${s.contactTbDx} 筆（ELM 確認）`);
     if (elmSummary.hasFirstLineTbMed)
-      elmReasons.push(`一線結核用藥（ValueSet tb-meds-firstline）${s.firstLineMeds || ''}筆（ELM 確認）`);
+      elmReasons.push(`一線結核用藥（ValueSet tb-meds-firstline）${elmSummary.tbFirstLineMedCount} 筆（ELM 確認）`);
     if (elmSummary.hasSecondLineTbMedWithTbDx)
-      elmReasons.push(`二線結核用藥搭配 TB 診斷（ValueSet tb-meds-secondline）${s.secondLineMeds || ''}筆（ELM 確認）`);
+      elmReasons.push(`二線結核用藥搭配 TB 診斷（ValueSet tb-meds-secondline）${elmSummary.tbSecondLineMedCount} 筆（ELM 確認）`);
     if (elmSummary.hasInfectionControlFlag)
-      elmReasons.push(`作用中感控 Flag（含具意義代碼）${s.infectionFlags || ''}筆（ELM 確認）`);
+      elmReasons.push(`作用中感控 Flag（含具意義代碼）${s.infectionFlags} 筆（ELM 確認）`);
 
     if (elmReasons.length > 0) {
       return {
@@ -447,14 +456,13 @@ export async function handleTbDetectionHook(body: CdsHooksRequest): Promise<CdsH
   const pfFlags = extractBundleResources(pf.flags, 'Flag');
   const flags = pf.flags ? pfFlags : await searchFlagsForPatient(patientId);
 
-  const pfObs = extractBundleResources(
-    (pf as Record<string, unknown>).observations,
-    'Observation',
-  );
-  const observations = (pf as Record<string, unknown>).observations
+  const pfObs = extractBundleResources(pf.observations, 'Observation');
+  const observations = pf.observations
     ? pfObs
     : await searchObservationsForPatient(patientId);
 
+  // ELM mode 下，signals 的計數僅用於 detail 文字輔助說明；indicator / reasons 的真相來源為 ELM 布林結果。
+  // TS_FALLBACK 路徑下，signals 才是主要決策依據。
   const signals = countSignals(conditions, medRequests, medStatements, flags);
   const safetyLabsSummary = formatSafetyLabsForDetail(buildLatestSafetyLabs(observations));
 

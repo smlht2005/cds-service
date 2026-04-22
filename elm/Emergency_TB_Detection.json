@@ -55,26 +55,6 @@
          "errorType" : "semantic",
          "errorSeverity" : "warning",
          "type" : "CqlToElmError"
-      }, {
-         "message" : "The function FHIRHelpers.ToDateTime has multiple overloads and due to the SignatureLevel setting (None), the overload signature is not being included in the output. This may result in ambiguous function resolution at runtime, consider setting the SignatureLevel to Overloads or All to ensure that the output includes sufficient information to support correct overload selection at runtime.",
-         "errorType" : "semantic",
-         "errorSeverity" : "warning",
-         "type" : "CqlToElmError"
-      }, {
-         "message" : "The function FHIRHelpers.ToDateTime has multiple overloads and due to the SignatureLevel setting (None), the overload signature is not being included in the output. This may result in ambiguous function resolution at runtime, consider setting the SignatureLevel to Overloads or All to ensure that the output includes sufficient information to support correct overload selection at runtime.",
-         "errorType" : "semantic",
-         "errorSeverity" : "warning",
-         "type" : "CqlToElmError"
-      }, {
-         "message" : "The function FHIRHelpers.ToDateTime has multiple overloads and due to the SignatureLevel setting (None), the overload signature is not being included in the output. This may result in ambiguous function resolution at runtime, consider setting the SignatureLevel to Overloads or All to ensure that the output includes sufficient information to support correct overload selection at runtime.",
-         "errorType" : "semantic",
-         "errorSeverity" : "warning",
-         "type" : "CqlToElmError"
-      }, {
-         "message" : "The function FHIRHelpers.ToDateTime has multiple overloads and due to the SignatureLevel setting (None), the overload signature is not being included in the output. This may result in ambiguous function resolution at runtime, consider setting the SignatureLevel to Overloads or All to ensure that the output includes sufficient information to support correct overload selection at runtime.",
-         "errorType" : "semantic",
-         "errorSeverity" : "warning",
-         "type" : "CqlToElmError"
       } ],
       "identifier" : {
          "id" : "Emergency_TB_Detection",
@@ -1492,53 +1472,6 @@
                      "otherFilter" : [ ]
                   }
                } ]
-            }
-         }, {
-            "name" : "LatestSafetyLabs",
-            "context" : "Patient",
-            "accessLevel" : "Public",
-            "annotation" : [ ],
-            "expression" : {
-               "type" : "Last",
-               "annotation" : [ ],
-               "signature" : [ ],
-               "source" : {
-                  "type" : "Query",
-                  "annotation" : [ ],
-                  "source" : [ {
-                     "alias" : "O",
-                     "annotation" : [ ],
-                     "expression" : {
-                        "dataType" : "{http://hl7.org/fhir}Observation",
-                        "templateId" : "http://hl7.org/fhir/StructureDefinition/Observation",
-                        "codeProperty" : "code",
-                        "codeComparator" : "in",
-                        "type" : "Retrieve",
-                        "annotation" : [ ],
-                        "codes" : {
-                           "name" : "TB-Lab-Monitoring",
-                           "preserve" : true,
-                           "type" : "ValueSetRef",
-                           "annotation" : [ ]
-                        },
-                        "include" : [ ],
-                        "codeFilter" : [ ],
-                        "dateFilter" : [ ],
-                        "otherFilter" : [ ]
-                     }
-                  } ],
-                  "let" : [ ],
-                  "relationship" : [ ],
-                  "sort" : {
-                     "annotation" : [ ],
-                     "by" : [ {
-                        "direction" : "asc",
-                        "path" : "effective",
-                        "type" : "ByColumn",
-                        "annotation" : [ ]
-                     } ]
-                  }
-               }
             }
          }, {
             "name" : "TbLabObservationCount",

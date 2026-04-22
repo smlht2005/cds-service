@@ -1,4 +1,8 @@
 /*
+ * 更新時間：2026-04-22 14:00
+ * 作者：CDS Service
+ * 摘要：PR #3 Copilot review：移除本地重複的 createFhirInstance，改 import 自 fhirClient.ts，消除重複工廠。
+ *
  * 更新時間：2026-04-22 11:35
  * 作者：CDS Service
  * 摘要：新增 searchAllConditionsForPatient（不加 clinical-status 過濾）供 ELM 路徑使用，
@@ -10,20 +14,9 @@
  *       與 src/fhir/fhirClient.ts 共用 FHIR_BASE_URL 設定但獨立 axios instance，避免動到既有 client。
  */
 
-import axios, { type AxiosInstance } from 'axios';
+import { createFhirInstance } from './fhirClient.js';
 
 const defaultBaseUrl = process.env.FHIR_BASE_URL ?? 'http://localhost:9090/fhir';
-
-function createFhirInstance(baseURL: string): AxiosInstance {
-  return axios.create({
-    baseURL,
-    timeout: 10_000,
-    headers: {
-      Accept: 'application/fhir+json',
-      'Content-Type': 'application/fhir+json',
-    },
-  });
-}
 
 const fhirInstance = createFhirInstance(defaultBaseUrl);
 
