@@ -1,0 +1,100 @@
+{
+  "resourceType": "Bundle",
+  "type": "transaction",
+  "entry": [
+    {
+      "fullUrl": "urn:uuid:flag-ckd001-ic-test",
+      "resource": {
+        "resourceType": "Flag",
+        "id": "flag-ckd001-ic-test",
+        "status": "active",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/flag-category",
+                "code": "safety",
+                "display": "Safety"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "text": "測試：院內感控／列管標記（請於正式環境替換為實際 code）"
+        },
+        "subject": {
+          "reference": "Patient/patient-ckd-001"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Flag/flag-ckd001-ic-test"
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:ms-ckd001-tb-atc",
+      "resource": {
+        "resourceType": "MedicationStatement",
+        "id": "ms-ckd001-tb-atc",
+        "status": "active",
+        "medicationCodeableConcept": {
+          "coding": [
+            {
+              "system": "http://www.whocc.no/atc",
+              "code": "J04AM02",
+              "display": "Example anti-TB combination (ATC J04* for CDS test)"
+            }
+          ],
+          "text": "結核用藥測資（ATC J04*）"
+        },
+        "subject": {
+          "reference": "Patient/patient-ckd-001"
+        },
+        "effectiveDateTime": "2026-04-19T08:00:00.000Z"
+      },
+      "request": {
+        "method": "PUT",
+        "url": "MedicationStatement/ms-ckd001-tb-atc"
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:cond-ckd001-tb-icd10",
+      "resource": {
+        "resourceType": "Condition",
+        "id": "cond-ckd001-tb-icd10",
+        "clinicalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+              "code": "active"
+            }
+          ]
+        },
+        "verificationStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+              "code": "confirmed"
+            }
+          ]
+        },
+        "code": {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10",
+              "code": "A15.0",
+              "display": "Tuberculosis of lung (test)"
+            }
+          ]
+        },
+        "subject": {
+          "reference": "Patient/patient-ckd-001"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Condition/cond-ckd001-tb-icd10"
+      }
+    }
+  ]
+}

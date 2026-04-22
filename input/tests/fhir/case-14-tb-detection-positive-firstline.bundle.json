@@ -1,0 +1,66 @@
+{
+  "resourceType": "Bundle",
+  "type": "transaction",
+  "entry": [
+    {
+      "fullUrl": "urn:uuid:patient-tb-001",
+      "resource": {
+        "resourceType": "Patient",
+        "id": "patient-tb-001",
+        "name": [ { "family": "結核測試", "given": ["陽性一線"] } ],
+        "gender": "male",
+        "birthDate": "1970-05-01"
+      },
+      "request": { "method": "PUT", "url": "Patient/patient-tb-001" }
+    },
+    {
+      "fullUrl": "urn:uuid:cond-tb001-a15",
+      "resource": {
+        "resourceType": "Condition",
+        "id": "cond-tb001-a15",
+        "clinicalStatus": {
+          "coding": [
+            { "system": "http://terminology.hl7.org/CodeSystem/condition-clinical", "code": "active" }
+          ]
+        },
+        "verificationStatus": {
+          "coding": [
+            { "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status", "code": "confirmed" }
+          ]
+        },
+        "code": {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "A15",
+              "display": "Respiratory tuberculosis, bacteriologically and histologically confirmed"
+            }
+          ]
+        },
+        "subject": { "reference": "Patient/patient-tb-001" }
+      },
+      "request": { "method": "PUT", "url": "Condition/cond-tb001-a15" }
+    },
+    {
+      "fullUrl": "urn:uuid:ms-tb001-isoniazid",
+      "resource": {
+        "resourceType": "MedicationStatement",
+        "id": "ms-tb001-isoniazid",
+        "status": "active",
+        "medicationCodeableConcept": {
+          "coding": [
+            {
+              "system": "https://twcore.nsysu.edu.tw/ig/twcore/CodeSystem/medication-nhi-tw",
+              "code": "A048038100",
+              "display": "Isoniazid Tablets 300 mg"
+            }
+          ],
+          "text": "一線結核藥物（Isoniazid）"
+        },
+        "subject": { "reference": "Patient/patient-tb-001" },
+        "effectiveDateTime": "2026-04-01T08:00:00.000Z"
+      },
+      "request": { "method": "PUT", "url": "MedicationStatement/ms-tb001-isoniazid" }
+    }
+  ]
+}

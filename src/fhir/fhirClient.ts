@@ -1,4 +1,12 @@
 /*
+ * 更新時間：2026-04-20 10:05
+ * 作者：CDS Service
+ * 摘要：searchFlagsForPatient 移除 Flag?status=（HAPI 不支援）；改由呼叫端依 resource.status 過濾 active
+ *
+ * 更新時間：2026-04-17 11:51
+ * 作者：CDS Service
+ * 摘要：急診 CDS：新增 Encounter／Flag／MedicationStatement 查詢（供 patient-view hybrid prefetch）
+ *
  * 更新時間：2026-04-16 10:08
  * 作者：CDS Service
  * 摘要：ckd-risk hybrid：新增 Condition active 與 CKD risk Observation（多 code + 365 天）搜尋 API
@@ -228,6 +236,71 @@ export async function searchObservationsForCkdRisk(
         date: dateGe,
         _sort: '-date',
         _count: count,
+      },
+    });
+    const bundle = response.data as { entry?: Array<{ resource?: Record<string, unknown> }> };
+    const entry = Array.isArray(bundle.entry) ? bundle.entry : [];
+    return entry.map((e) => e.resource).filter(Boolean) as Record<string, unknown>[];
+  } catch (error) {
+    handleFhirError(error);
+  }
+}
+
+/**
+ * 查詢病患 Encounter（依日期新到舊；急診返診／時間窗分析用）
+ */
+export async function searchEncountersForPatient(
+  patientId: string,
+  options?: { count?: number },
+): Promise<Record<string, unknown>[]> {
+  const count = options?.count ?? 50;
+  try {
+    const response = await fhirInstance.get('/Encounter', {
+      params: {
+        patient: patientId,
+        _sort: '-date',
+        _count: count,
+      },
+    });
+    const bundle = response.data as { entry?: Array<{ resource?: Record<string, unknown> }> };
+    const entry = Array.isArray(bundle.entry) ? bundle.entry : [];
+    return entry.map((e) => e.resource).filter(Boolean) as Record<string, unknown>[];
+  } catch (error) {
+    handleFhirError(error);
+  }
+}
+
+/**
+ * 查詢病患 Flag（列管／感控標記等）。
+ * 注意：多數 HAPI 版本未將 `status` 註冊為 Flag 的 _search 參數（會 HAPI-0524），故僅以 patient 查詢，active 請於呼叫端過濾。
+ */
+export async function searchFlagsForPatient(patientId: string): Promise<Record<string, unknown>[]> {
+  try {
+    const response = await fhirInstance.get('/Flag', {
+      params: {
+        patient: patientId,
+        _count: 200,
+      },
+    });
+    const bundle = response.data as { entry?: Array<{ resource?: Record<string, unknown> }> };
+    const entry = Array.isArray(bundle.entry) ? bundle.entry : [];
+    return entry.map((e) => e.resource).filter(Boolean) as Record<string, unknown>[];
+  } catch (error) {
+    handleFhirError(error);
+  }
+}
+
+/**
+ * 查詢病患 MedicationStatement（用藥線索；如結核用藥 ATC J04*）
+ */
+export async function searchMedicationStatementsForPatient(
+  patientId: string,
+): Promise<Record<string, unknown>[]> {
+  try {
+    const response = await fhirInstance.get('/MedicationStatement', {
+      params: {
+        patient: patientId,
+        _count: 200,
       },
     });
     const bundle = response.data as { entry?: Array<{ resource?: Record<string, unknown> }> };

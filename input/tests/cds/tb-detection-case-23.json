@@ -1,0 +1,9 @@
+﻿{
+  "hook": "patient-view",
+  "hookInstance": "tb-detection-case-23",
+  "fhirServer": "http://localhost:9090/fhir",
+  "context": {
+    "patientId": "Patient/patient-tb-023",
+    "userId": "Practitioner/pra-001"
+  }
+}

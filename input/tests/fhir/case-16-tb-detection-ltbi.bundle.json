@@ -1,0 +1,66 @@
+{
+  "resourceType": "Bundle",
+  "type": "transaction",
+  "entry": [
+    {
+      "fullUrl": "urn:uuid:patient-tb-016",
+      "resource": {
+        "resourceType": "Patient",
+        "id": "patient-tb-016",
+        "name": [ { "family": "結核測試", "given": ["LTBI"] } ],
+        "gender": "male",
+        "birthDate": "1978-03-12"
+      },
+      "request": { "method": "PUT", "url": "Patient/patient-tb-016" }
+    },
+    {
+      "fullUrl": "urn:uuid:cond-tb016-r761",
+      "resource": {
+        "resourceType": "Condition",
+        "id": "cond-tb016-r761",
+        "clinicalStatus": {
+          "coding": [
+            { "system": "http://terminology.hl7.org/CodeSystem/condition-clinical", "code": "active" }
+          ]
+        },
+        "verificationStatus": {
+          "coding": [
+            { "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status", "code": "confirmed" }
+          ]
+        },
+        "code": {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "R76.1",
+              "display": "Nonspecific reaction to test for tuberculosis (LTBI)"
+            }
+          ]
+        },
+        "subject": { "reference": "Patient/patient-tb-016" }
+      },
+      "request": { "method": "PUT", "url": "Condition/cond-tb016-r761" }
+    },
+    {
+      "fullUrl": "urn:uuid:ms-tb016-isoniazid",
+      "resource": {
+        "resourceType": "MedicationStatement",
+        "id": "ms-tb016-isoniazid",
+        "status": "active",
+        "medicationCodeableConcept": {
+          "coding": [
+            {
+              "system": "https://twcore.nsysu.edu.tw/ig/twcore/CodeSystem/medication-nhi-tw",
+              "code": "A048038100",
+              "display": "Isoniazid Tablets 300 mg"
+            }
+          ],
+          "text": "LTBI 追蹤用 INH"
+        },
+        "subject": { "reference": "Patient/patient-tb-016" },
+        "effectiveDateTime": "2026-03-10T08:00:00.000Z"
+      },
+      "request": { "method": "PUT", "url": "MedicationStatement/ms-tb016-isoniazid" }
+    }
+  ]
+}

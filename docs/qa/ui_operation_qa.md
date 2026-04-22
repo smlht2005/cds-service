@@ -1,4 +1,8 @@
 <!--
+更新時間：2026-04-21 09:12
+作者：CDS Service
+摘要：第 7 節相關文件表新增 `fe_extract_hook_builders_qa.md`（mixed hooks builder）；第 8 節變更紀錄補一行
+
 更新時間：2026-04-16 14:59
 作者：CDS Service
 摘要：文件同步：ckd-risk Prefetch keys 新增 conditionsAll + familyHistory（支援 AKI N17* 與家族史 CKD）
@@ -142,6 +146,7 @@
 
 | 資源 | 用途 |
 |------|------|
+| [`docs/qa/fe_extract_hook_builders_qa.md`](fe_extract_hook_builders_qa.md) | **`fe-extract-hook-builders`**：`observation-create`／`order-select` hookBuilders、`App.tsx` 整合與 Discovery 限制 |
 | [`docs/CDS_Hook_UI_Operation.md`](../CDS_Hook_UI_Operation.md) | 操作說明主文件 |
 | [`docs/qa/README.md`](README.md) | CQL／ELM／UCUM 與 ckd-risk v1 UI 驗證 |
 | [`postman/CDS-Service-E2E.postman_collection.json`](../../postman/CDS-Service-E2E.postman_collection.json) | TC-PF-01～03、TC-PF-CKD-* |
@@ -153,5 +158,6 @@
 
 | 日期 | 摘要 |
 |------|------|
+| 2026-04-21 | 相關文件表新增 `fe_extract_hook_builders_qa.md`（mixed hooks Context Builder QA） |
 | 2026-04-16 | 新增 UI-CKD-02：ckd-risk Prefetch OFF／ON 對照 hybrid 與 Request／Network 預期 |
 | 2026-04-16 | 初版：控制列 QA、Prefetch 開關關閉／開啟對照、錯誤訊息、手動驗證案例 |

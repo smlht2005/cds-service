@@ -1,3 +1,13 @@
+/*
+ * 更新時間：2026-04-20 17:18
+ * 作者：CDS Service
+ * 更新時間：2026-04-22 10:58
+ * 作者：CDS Service
+ * 摘要：Phase 4 — fhirSearch 擴充 MedicationRequest（tb-detection 前端 Prefetch 用）。
+ *
+ * 摘要：前端 emergency prefetch 支援：FHIR search 擴充 Encounter/Flag/MedicationStatement
+ */
+
 export type FhirClientError =
   | { kind: 'http'; status: number; statusText: string; bodyText?: string }
   | { kind: 'invalid-json'; status: number; bodyText: string };
@@ -37,7 +47,14 @@ export async function fhirGet(resourcePath: string): Promise<Record<string, unkn
 }
 
 export async function fhirSearch(
-  resourceType: 'Condition' | 'Observation' | 'FamilyMemberHistory',
+  resourceType:
+    | 'Condition'
+    | 'Observation'
+    | 'FamilyMemberHistory'
+    | 'Encounter'
+    | 'Flag'
+    | 'MedicationStatement'
+    | 'MedicationRequest',
   query: string,
 ): Promise<Array<Record<string, unknown>>> {
   const { status, statusText, json, rawText } = await fetchJson(`/fhir/${resourceType}?${query}`, {

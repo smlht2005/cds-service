@@ -1,0 +1,106 @@
+{
+  "info": {
+    "name": "CDS Service — Emergency（急診獨立 CDS）",
+    "description": "專測第二程序急診 CDS（`npm run start:emergency`，預設 port **3001**）。\n\n**前置**\n- HAPI FHIR 可連（與主服務共用 `FHIR_BASE_URL`）\n- 已啟動急診程序：`npm run start:emergency` 或 `npm run dev:emergency`\n\n**Collection 變數**\n- `emergencyBaseUrl`：急診 CDS 基底（預設 `http://127.0.0.1:3001`）\n- `patientId`：測試病患 logical id（預設 `patient-ckd-001`）\n\n**端點**\n- `GET /cds-services` — Discovery（`72hr-revisit`、`infection-control-warning`）\n- `POST /cds-services/72hr-revisit` — 72 小時返診邏輯\n- `POST /cds-services/infection-control-warning` — 感控／列管線索",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "emergencyBaseUrl", "value": "http://127.0.0.1:3001" },
+    { "key": "patientId", "value": "patient-ckd-001" }
+  ],
+  "item": [
+    {
+      "name": "Discovery",
+      "item": [
+        {
+          "name": "GET /cds-services",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": "{{emergencyBaseUrl}}/cds-services",
+            "description": "預期 HTTP 200，`services` 含兩筆：`id` 為 `72hr-revisit`、`infection-control-warning`；`href` 應指向 `emergencyBaseUrl`。"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Hooks（hybrid，無 prefetch）",
+      "item": [
+        {
+          "name": "POST /cds-services/72hr-revisit",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json; charset=utf-8" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"hook\": \"patient-view\",\n  \"context\": {\n    \"patientId\": \"{{patientId}}\"\n  }\n}"
+            },
+            "url": "{{emergencyBaseUrl}}/cds-services/72hr-revisit",
+            "description": "伺服端向 FHIR 查 Encounter。回傳 `cards`：未達門檻多為 info；達 `EMERGENCY_REVISIT_MIN_ENCOUNTERS` 為 warning（見 `.env.example`）。"
+          },
+          "response": []
+        },
+        {
+          "name": "POST /cds-services/infection-control-warning",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json; charset=utf-8" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"hook\": \"patient-view\",\n  \"context\": {\n    \"patientId\": \"{{patientId}}\"\n  }\n}"
+            },
+            "url": "{{emergencyBaseUrl}}/cds-services/infection-control-warning",
+            "description": "伺服端查 Flag／MedicationStatement／Condition。有線索時 warning；否則 info。"
+          },
+          "response": []
+        },
+        {
+          "name": "POST 72hr-revisit（Patient/ 前綴）",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json; charset=utf-8" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"hook\": \"patient-view\",\n  \"context\": {\n    \"patientId\": \"Patient/{{patientId}}\"\n  }\n}"
+            },
+            "url": "{{emergencyBaseUrl}}/cds-services/72hr-revisit",
+            "description": "驗證 `context.patientId` 允許 `Patient/{id}` 形式（與主 CDS handler 一致）。"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "錯誤／邊界",
+      "item": [
+        {
+          "name": "POST 72hr-revisit（缺少 patientId）",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json; charset=utf-8" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"hook\": \"patient-view\",\n  \"context\": {}\n}"
+            },
+            "url": "{{emergencyBaseUrl}}/cds-services/72hr-revisit",
+            "description": "預期仍 HTTP 200，body 內 `cards` 提示缺少 patientId（warning）。"
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

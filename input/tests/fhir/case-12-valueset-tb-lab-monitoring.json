@@ -1,0 +1,23 @@
+{
+  "resourceType": "ValueSet",
+  "id": "hosp-tb-lab-monitoring",
+  "url": "https://fhir.your-hosp.org.tw/ValueSet/tb-lab-monitoring",
+  "version": "2.1",
+  "name": "HospTBLabMonitoring",
+  "title": "院內結核病監測檢驗值集",
+  "status": "active",
+  "compose": {
+    "include": [
+      {
+        "system": "https://twcore.nsysu.edu.tw/ig/twcore/CodeSystem/medical-service-payment-tw",
+        "concept": [
+          { "code": "09026C", "display": "血清麩胺酸丙酮酸轉氨基脢 (ALT/GPT)" },
+          { "code": "09025C", "display": "血清麩胺酸苯醋酸轉氨基脢 (AST/GOT)" },
+          { "code": "09015C", "display": "肌酸酐 (Creatinine)" },
+          { "code": "08011C", "display": "血液檢查 (CBC)" },
+          { "code": "09029C", "display": "膽紅素總量 (T-Bil)" }
+        ]
+      }
+    ]
+  }
+}

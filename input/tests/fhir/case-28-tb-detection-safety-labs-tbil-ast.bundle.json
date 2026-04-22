@@ -1,0 +1,84 @@
+{
+  "resourceType": "Bundle",
+  "type": "transaction",
+  "entry": [
+    {
+      "fullUrl": "urn:uuid:obs-tb001-ast-20260420",
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-tb001-ast-20260420",
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              { "system": "http://terminology.hl7.org/CodeSystem/observation-category", "code": "laboratory" }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "https://twcore.nsysu.edu.tw/ig/twcore/CodeSystem/medical-service-payment-tw",
+              "code": "09025C",
+              "display": "肝功能檢查 (AST/GOT)"
+            },
+            {
+              "system": "http://loinc.org",
+              "code": "1920-8",
+              "display": "Aspartate aminotransferase [Enzymatic activity/volume] in Serum or Plasma"
+            }
+          ],
+          "text": "AST"
+        },
+        "subject": { "reference": "Patient/patient-tb-001" },
+        "effectiveDateTime": "2026-04-20T08:00:00.000Z",
+        "valueQuantity": {
+          "value": 32,
+          "unit": "U/L",
+          "system": "http://unitsofmeasure.org",
+          "code": "U/L"
+        }
+      },
+      "request": { "method": "PUT", "url": "Observation/obs-tb001-ast-20260420" }
+    },
+    {
+      "fullUrl": "urn:uuid:obs-tb001-tbil-20260418",
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-tb001-tbil-20260418",
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              { "system": "http://terminology.hl7.org/CodeSystem/observation-category", "code": "laboratory" }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "https://twcore.nsysu.edu.tw/ig/twcore/CodeSystem/medical-service-payment-tw",
+              "code": "09029C",
+              "display": "膽紅素（總膽紅素 T-Bil）"
+            },
+            {
+              "system": "http://loinc.org",
+              "code": "1975-2",
+              "display": "Bilirubin.total [Mass/volume] in Serum or Plasma"
+            }
+          ],
+          "text": "T-Bil"
+        },
+        "subject": { "reference": "Patient/patient-tb-001" },
+        "effectiveDateTime": "2026-04-18T08:00:00.000Z",
+        "valueQuantity": {
+          "value": 8.2,
+          "unit": "μmol/L",
+          "system": "http://unitsofmeasure.org",
+          "code": "umol/L"
+        }
+      },
+      "request": { "method": "PUT", "url": "Observation/obs-tb001-tbil-20260418" }
+    }
+  ]
+}

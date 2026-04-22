@@ -1,0 +1,477 @@
+Phase 1 → 專案骨架 + 型別系統
+Phase 2 → Fastify 核心應用 + 路由層
+Phase 3 → FHIR Prefetch + CQL 規則引擎 Stub
+Phase 4 → 卡片產生器（R1–R6）+ 稽核 Logger
+Phase 5 → 單元測試（Vitest）
+Phase 6 → Docker 容器化 + 上線整合清單
+-----------
+
+Phase 1 Prompt｜專案骨架 + 型別系統
+-------------------
+<context>
+你是資深 CDS Hooks 架構師，負責建置「急診胸痛／疑似 ACS／疑似 MI」
+CDS 服務的 Fastify + TypeScript 專案。這是第一階段：建立專案骨架與型別系統。
+
+## 技術棧（已鎖定，不得更改）：
+- Node.js 20 LTS、Fastify 4.x、TypeScript 5.x strict mode、pnpm
+- 測試：Vitest + @fastify/inject
+- Logger：pino（Fastify 內建）
+- 驗證：Zod
+- 路徑別名：`@/` 指向 `src/`
+
+## 專案目錄結構（MUST 完全照此輸出）：
+acs-cds-service/
+├── src/
+│   ├── app.ts
+│   ├── server.ts
+│   ├── config/
+│   │   └── env.ts
+│   ├── types/
+│   │   └── cdsHooks.ts
+│   ├── routes/
+│   │   └── cdsServices.ts
+│   ├── fhir/
+│   │   └── prefetchBuilder.ts
+│   ├── cql/
+│   │   └── ruleEngine.ts
+│   ├── cards/
+│   │   └── cardBuilder.ts
+│   ├── audit/
+│   │   └── auditLogger.ts
+│   └── tests/
+│       └── rules.test.ts
+├── docker-compose.yml
+├── Dockerfile
+├── package.json
+├── pnpm-lock.yaml（不需輸出內容）
+├── tsconfig.json
+├── vitest.config.ts
+└── .env.example
+</context>
+
+<task>
+產出 Phase 1 的所有成品，共 5 個檔案：
+
+1. **`package.json`**
+   - scripts: dev、build、start、test、lint
+   - dependencies: fastify、@fastify/cors、@fastify/auth、zod、pino
+   - devDependencies: typescript、tsx、vitest、@vitest/coverage-v8、
+     @types/node、eslint、prettier
+
+2. **`tsconfig.json`**
+   - strict: true、ESM（"module": "NodeNext"）
+   - paths: { "@/*": ["./src/*"] }
+   - outDir: ./dist、rootDir: ./src
+
+3. **`vitest.config.ts`**
+   - 測試環境：node
+   - 覆蓋率：v8，threshold: 70
+
+4. **`src/config/env.ts`**
+   - 使用 Zod 解析所有環境變數，並提供 TypeScript 型別推導
+   - MUST 包含：
+     - PORT（預設 3000）
+     - NODE_ENV（development / production / test）
+     - BEARER_TOKEN（必填）
+     - TROPONIN_UPPER_LIMIT（number，預設 0.04）
+     - CDS_COOLDOWN_MINUTES（number，預設 15）
+     - CQL_ENGINE_URL（optional string）
+     - HEART_SCORE_APP_URL（預設 https://example.org/heart-score）
+     - CDS_SOURCE_LABEL（預設「急診 ACS 臨床決策支援」）
+     - CDS_SOURCE_URL（預設 https://example.org/cds-info）
+
+5. **`src/types/cdsHooks.ts`**
+   - 完整 TypeScript interface，覆蓋 CDS Hooks 2.0 規格：
+     - CdsRequest（hook、hookInstance、context、prefetch）
+     - CdsResponse（cards[]）
+     - CdsCard（summary、detail、indicator、source、suggestions、links）
+     - CardIndicator enum：INFO = "info"、WARNING = "warning"、CRITICAL = "critical"
+     - CdsSuggestion（label、actions[]）
+     - CdsAction（type、description、resource）
+     - CdsLink（label、url、type）
+     - CdsServiceDefinition（hook、id、title、description、prefetch）
+     - FhirBundle（resourceType、entry[]）
+     - AuditRecord（hookId、patientId、encounterId、triggeredAt、
+       rulesEvaluated[]、cardsReturned、userId）
+</task>
+
+<constraints>
+- 每個檔案頂端 MUST 有 JSDoc 模組說明（用途 + 對應 phase）
+- CardIndicator 使用 TypeScript const enum
+- 所有 interface 加上 readonly 修飾符（immutable by default）
+- 不得輸出 Phase 2–6 的任何程式碼
+- 僅輸出路徑標題 + 程式碼區塊，成品間不加散文說明
+</constraints>
+
+<output_format>
+輸出格式：`### 路徑` + fenced code block，依序輸出 5 個成品。
+最後輸出一行：「✅ Phase 1 完成 — 請將以上檔案建立後，執行 `pnpm install` 確認無誤，再進行 Phase 2。」
+</output_format>
+
+
+
+
+Phase 2 → Fastify 核心應用 + 路由層
+---------------------
+<context>
+## Phase 1 已完成，以下為既有成品（直接沿用，不得重新輸出）：
+- src/config/env.ts（Zod env 解析）
+- src/types/cdsHooks.ts（CDS Hooks 2.0 完整 interface）
+- package.json / tsconfig.json / vitest.config.ts
+
+## 技術棧（已鎖定）：
+- Node.js 20 LTS、Fastify 4.x、TypeScript 5.x strict mode、pnpm
+- 路徑別名：@/ → src/
+
+## CDS 服務端點規格（4 個，已鎖定）：
+- GET  /cds-services                         → 回傳服務清單
+- POST /cds-services/acs-triage-screen       → hook: patient-view（R1、R5、R6）
+- POST /cds-services/acs-workup-check        → hook: order-select（R2、R3）
+- POST /cds-services/acs-result-escalation   → hook: patient-view（R4）
+
+## 認證規則：
+- 所有 POST 端點 MUST 驗證 Authorization: Bearer <token>
+- GET /cds-services 為公開端點（無需認證）
+- token 比對 env.BEARER_TOKEN，不符合回傳 HTTP 401
+</context>
+
+<task>
+產出 Phase 2 的所有成品，共 3 個檔案：
+
+1. **`src/app.ts`**
+   - 建立並 export Fastify instance（不含 listen，listen 在 server.ts）
+   - 註冊：@fastify/cors、pino logger、全域 auth hook（Bearer Token）
+   - 全域錯誤處理器：任何未捕捉錯誤 MUST 回傳 HTTP 200 + `{"cards":[]}`
+     並寫入 pino error log（包含 hookInstance、patientId、error message）
+   - 使用 Fastify plugin 模式（`fastify-plugin` 包裝）
+
+2. **`src/server.ts`**
+   - import app，呼叫 app.listen({ port: env.PORT })
+   - 處理 SIGTERM / SIGINT graceful shutdown
+   - 啟動成功後 log：服務名稱、port、NODE_ENV
+
+3. **`src/routes/cdsServices.ts`**
+   - 以 Fastify plugin 形式 export
+   - GET /cds-services：回傳 4 個 CdsServiceDefinition，含 prefetch 定義
+     （prefetch key 對應各 hook 所需之 FHIR Resource 查詢字串）
+   - POST 三個端點，每個端點 MUST：
+     a. 用 Zod 驗證 CdsRequest body（hook 值不符合預期時回傳 cards:[]）
+     b. 呼叫 ruleEngine.evaluate()（Phase 3 實作，此處 import 並呼叫介面）
+     c. 呼叫 cardBuilder.build()（Phase 4 實作，此處 import 並呼叫介面）
+     d. 呼叫 auditLogger.log()（Phase 4 實作，此處 import 並呼叫介面）
+     e. 回傳 CdsResponse
+
+   - prefetch 定義（MUST 完整列出）：
+     acs-triage-screen prefetch:
+       patient: "Patient/{{context.patientId}}"
+       conditions: "Condition?patient={{context.patientId}}&_count=50"
+       observations: "Observation?patient={{context.patientId}}&_count=100"
+       medications: "MedicationStatement?patient={{context.patientId}}&_count=50"
+       medicationRequests: "MedicationRequest?patient={{context.patientId}}&_count=50"
+       procedures: "Procedure?patient={{context.patientId}}&_count=30"
+     acs-workup-check prefetch:
+       serviceRequests: "ServiceRequest?patient={{context.patientId}}&_count=30"
+       observations: "Observation?patient={{context.patientId}}&_count=100"
+     acs-result-escalation prefetch:
+       observations: "Observation?patient={{context.patientId}}&_count=100"
+</task>
+
+<constraints>
+- 所有 import 使用路徑別名 @/
+- ruleEngine、cardBuilder、auditLogger 以 interface 方式 import（即使 Phase 3/4 尚未實作，也需定義 TypeScript import 與型別）
+- 不得在此 phase 實作 ruleEngine / cardBuilder / auditLogger 的邏輯
+- 每個 POST 端點加上 request schema（Zod）與 Fastify schema（用於文件）
+- 不得輸出 Phase 1、3–6 的任何程式碼
+</constraints>
+
+<output_format>
+輸出格式：`### 路徑` + fenced code block，依序輸出 3 個成品。
+最後輸出一行：「✅ Phase 2 完成 — 執行 `pnpm dev` 確認伺服器啟動、GET /cds-services 可正常回應後，再進行 Phase 3。」
+</output_format>
+---------
+
+Phase 3 → FHIR Prefetch + CQL 規則引擎 Stub
+<context>
+## Phase 1–2 已完成，以下為既有成品（直接沿用）：
+- src/config/env.ts、src/types/cdsHooks.ts
+- src/app.ts、src/server.ts、src/routes/cdsServices.ts
+
+## 6 條規則與 CQL Library 對應（已鎖定）：
+| 規則 | CQL Library | CQL Define | 觸發 Hook |
+|------|-------------|------------|-----------|
+| R1 | ChestPainScreenLogic | Suspected ACS Initial Screen | patient-view |
+| R2 | ACSWorkupCompletenessLogic | Needs Initial ACS Workup | patient-view / order-select |
+| R3 | ACSWorkupCompletenessLogic | Incomplete ACS Workup | patient-view / order-select |
+| R4 | ACSResultEscalationLogic | Abnormal ACS Evidence | patient-view |
+| R5 | ACSRiskHistoryBannerLogic | ACS Risk History Banner | patient-view |
+| R6 | ChestPainScreenLogic + UI | Suspected ACS Initial Screen | patient-view |
+
+## FHIR ValueSet OID 佔位符（正式上線前由院方替換）：
+- Chest Pain Complaint:        urn:oid:example.chest-pain-complaint
+- Chest Tightness Complaint:   urn:oid:example.chest-tightness-complaint
+- CAD History:                 urn:oid:example.cad-history
+- MI History:                  urn:oid:example.mi-history
+- Hypertension:                urn:oid:example.hypertension
+- Diabetes:                    urn:oid:example.diabetes
+- Prior PCI:                   urn:oid:example.prior-pci
+- Antiplatelet Medication:     urn:oid:example.antiplatelet
+- Anticoagulant Medication:    urn:oid:example.anticoagulant
+- Troponin Test:               urn:oid:example.troponin-test
+- ECG Test:                    urn:oid:example.ecg-test
+- Ischemic ECG Finding:        urn:oid:example.ischemic-ecg
+</context>
+
+<task>
+產出 Phase 3 的所有成品，共 2 個檔案：
+
+1. **`src/fhir/prefetchBuilder.ts`**
+   - export function extractPatientAge(bundle): number | null
+   - export function extractConditionCodes(bundle): string[]
+   - export function extractObservationCodes(bundle): string[]
+   - export function extractMedicationCodes(bundle): string[]
+   - export function extractServiceRequestStatuses(bundle, codeOid): string[]
+   - export function extractTroponinValue(bundle, upperLimit): boolean
+     （Troponin 值 > upperLimit → true；upperLimit 來自 env.TROPONIN_UPPER_LIMIT）
+   - export function extractECGIschemiaFlag(bundle): boolean
+   - 所有 ValueSet OID 以常數定義於檔案頂端，行內加註「// 院方上線前替換」
+
+2. **`src/cql/ruleEngine.ts`**
+   - export interface RuleEvaluationInput { ruleId: string; prefetch: FhirBundle }
+   - export interface RuleEvaluationResult { ruleId: string; triggered: boolean; reason: string }
+   - export async function evaluate(input: RuleEvaluationInput): Promise<RuleEvaluationResult>
+   - 邏輯：
+     a. 若 env.CQL_ENGINE_URL 已設定 → 呼叫外部 CQL 引擎（HTTP POST），
+        並在函式頂端加上 // TODO: 替換為院方 CQL 引擎端點 URL
+     b. 否則使用內建 stub，依 ruleId（R1–R6）呼叫對應的 stub 函式
+   - Stub 函式命名（MUST 與 CQL define 名稱對應）：
+     - evaluateR1_SuspectedACSInitialScreen(bundle) → boolean
+     - evaluateR2_NeedsInitialACSWorkup(bundle) → boolean
+     - evaluateR3_IncompleteACSWorkup(bundle) → boolean
+     - evaluateR4_AbnormalACSEvidence(bundle) → boolean
+     - evaluateR5_ACSRiskHistoryBanner(bundle) → boolean
+     - evaluateR6_HeartScoreToolLink(bundle) → boolean（與 R1 成立條件相同）
+   - 每個 stub 函式 MUST 使用 prefetchBuilder 的 extract 函式實作判斷邏輯
+   - 每個 stub 函式頂端加上 JSDoc 說明對應 CQL Library 與 Define 名稱
+</task>
+
+<constraints>
+- 所有 OID 常數集中定義，不得散落各函式內
+- extractTroponinValue 的 upperLimit 參數 MUST 來自 env，不得 hardcode
+- evaluate() MUST 以 try/catch 包覆，錯誤時回傳 triggered: false + reason: "evaluation error"
+- 不得輸出 Phase 1–2、4–6 的任何程式碼
+</constraints>
+
+<output_format>
+輸出格式：`### 路徑` + fenced code block，依序輸出 2 個成品。
+最後輸出一行：「✅ Phase 3 完成 — 確認 ruleEngine.ts 可正確 import 後，進行 Phase 4。」
+</output_format>
+
+---------
+<context>
+## Phase 1–3 已完成，以下為既有成品（直接沿用）：
+- src/types/cdsHooks.ts（CardIndicator enum: info / warning / critical）
+- src/config/env.ts（CDS_SOURCE_LABEL、CDS_SOURCE_URL、HEART_SCORE_APP_URL）
+- src/cql/ruleEngine.ts（RuleEvaluationResult）
+
+## 卡片規格（已鎖定）：
+| 規則 | indicator | 卡片類型 | 是否含 suggestions | 是否含 links |
+|------|-----------|----------|--------------------|--------------|
+| R1 | warning | Warning Card | ✅ 建議進入 ACS 評估流程 | ❌ |
+| R2 | warning | Suggestion Card | ✅ 補開 ECG、補開 Troponin | ❌ |
+| R3 | warning | Warning Card | ✅ 補齊缺漏項目 | ❌ |
+| R4 | critical | Warning Card | ✅ 通知醫師、啟動胸痛路徑 | ❌ |
+| R5 | info | Information Card | ❌ | ❌ |
+| R6 | info | App Link Card | ❌ | ✅ HEART Score 工具連結 |
+
+## 冷卻抑制規則：
+- 同一 patientId + ruleId 組合於 CDS_COOLDOWN_MINUTES 內不重複觸發
+- 使用 in-memory Map（key: `${patientId}:${ruleId}`，value: last trigger timestamp）
+- 注意：此為單節點實作；若需多節點請改用 Redis（加 TODO 標記）
+</context>
+
+<task>
+產出 Phase 4 的所有成品，共 2 個檔案：
+
+1. **`src/cards/cardBuilder.ts`**
+   - export interface BuildInput {
+       results: RuleEvaluationResult[];
+       patientId: string;
+       encounterId: string;
+     }
+   - export function build(input: BuildInput): CdsCard[]
+   - 內含冷卻抑制邏輯（in-memory Map）
+   - 每條規則對應獨立私有函式：buildR1Card()…buildR6Card()
+   - 每張卡片 MUST 包含：
+     - summary（繁體中文，依規格書原文）
+     - detail（繁體中文，含觸發原因說明）
+     - indicator（依上表）
+     - source.label = env.CDS_SOURCE_LABEL
+     - source.url = env.CDS_SOURCE_URL
+   - R2 卡片 suggestions MUST 含兩個 action：
+     - type: "create"，resource: ServiceRequest skeleton（ECG）
+     - type: "create"，resource: ServiceRequest skeleton（Troponin）
+   - R6 卡片 links MUST 含：
+     - label: "開啟 HEART Score 風險評估工具"
+     - url: env.HEART_SCORE_APP_URL
+     - type: "smart"
+
+2. **`src/audit/auditLogger.ts`**
+   - export interface AuditRecord（依 src/types/cdsHooks.ts 定義）
+   - export async function log(record: AuditRecord): Promise<void>
+   - 實作：使用 pino 將 AuditRecord 寫入 structured JSON log
+   - log level：info（正常觸發）、warn（規則觸發但冷卻抑制）、error（例外）
+   - MUST 包含欄位：
+     hookId、patientId、encounterId、userId、triggeredAt（ISO 8601）、
+     rulesEvaluated（ruleId + triggered + reason）、
+     cardsReturned（summary[]）、suppressedByCoooldown（boolean）
+</task>
+
+<constraints>
+- build() MUST 以 try/catch 包覆，錯誤時回傳空陣列 []
+- 冷卻 Map 於模組層級宣告（module singleton），加 TODO 標記 Redis 替換點
+- 所有臨床文案（summary / detail）保留繁體中文
+- 不得輸出 Phase 1–3、5–6 的任何程式碼
+</constraints>
+
+<output_format>
+輸出格式：`### 路徑` + fenced code block，依序輸出 2 個成品。
+最後輸出一行：「✅ Phase 4 完成 — 執行 `pnpm build` 確認編譯無誤後，進行 Phase 5。」
+</output_format>
+
+-----------------
+🟦 Phase 5 Prompt｜單元測試（Vitest）
+-----------------------
+<context>
+## Phase 1–4 已完成，以下為既有成品（直接沿用）：
+- src/cql/ruleEngine.ts（evaluate()、evaluateR1…R6 stub 函式）
+- src/cards/cardBuilder.ts（build()）
+- src/fhir/prefetchBuilder.ts（所有 extract 函式）
+- src/types/cdsHooks.ts（所有 interface）
+
+## 測試覆蓋需求：
+- 每條規則（R1–R6）MUST 各有：
+  - 至少 1 個「觸發」情境（stub 函式回傳 true，卡片產出正確）
+  - 至少 1 個「不觸發」情境（stub 函式回傳 false，cards 為空）
+- 額外 MUST 涵蓋：
+  - R2 卡片 suggestions 含兩個 ServiceRequest action
+  - R6 卡片 links 含 HEART Score URL
+  - 冷卻抑制：同一 patient + rule 第二次呼叫被抑制
+  - evaluate() 於 FHIR Bundle 為空時回傳 triggered: false
+  - 全域錯誤處理：ruleEngine 拋出例外時 route 回傳 `{"cards":[]}`
+</context>
+
+<task>
+產出 Phase 5 的所有成品，共 2 個檔案：
+
+1. **`src/tests/fixtures/mockBundles.ts`**
+   - export 以下 mock FHIR Bundle（TypeScript 常數）：
+     - EMPTY_BUNDLE：無任何 entry
+     - CHEST_PAIN_HIGH_RISK_BUNDLE：含胸痛主訴 Observation + CAD Condition + MI Condition
+     - CHEST_PAIN_LOW_RISK_BUNDLE：含非胸痛主訴 Observation，無高風險病史
+     - ECG_ONLY_BUNDLE：含 ECG ServiceRequest（status: active），無 Troponin
+     - TROPONIN_ONLY_BUNDLE：含 Troponin Observation（status: final），無 ECG
+     - ABNORMAL_TROPONIN_BUNDLE：含 Troponin Observation，value > 0.04
+     - ISCHEMIC_ECG_BUNDLE：含 ECG Observation，code 對應 urn:oid:example.ischemic-ecg
+     - HIGH_RISK_HISTORY_BUNDLE：含 PCI Procedure + Antiplatelet MedicationStatement
+
+2. **`src/tests/rules.test.ts`**
+   - 使用 Vitest（describe / it / expect / vi.mock）
+   - 使用 @fastify/inject 進行 route 層整合測試
+   - 分組：
+     - describe("ruleEngine stub - R1 至 R6")
+     - describe("cardBuilder")
+     - describe("冷卻抑制機制")
+     - describe("route 整合測試 - acs-triage-screen")
+     - describe("route 整合測試 - acs-workup-check")
+     - describe("route 整合測試 - acs-result-escalation")
+     - describe("例外情境 - 錯誤處理")
+   - 每個 it 加上測試說明（繁體中文）
+   - MUST 驗證：
+     - card.indicator 值為合法 CDS Hooks 值（info / warning / critical）
+     - card.source.label 與 card.source.url 存在且非空
+     - R2 suggestions 陣列長度 ≥ 2
+     - R6 links[0].type === "smart"
+</task>
+
+<constraints>
+- vi.mock 僅用於隔離外部 CQL 引擎 HTTP 呼叫，不得 mock ruleEngine 本體邏輯
+- 每個 it 測試 MUST 使用 EMPTY_BUNDLE 或具名 mock bundle，不得使用匿名 {} 作為 bundle
+- 不得輸出 Phase 1–4、6 的任何程式碼
+</constraints>
+
+<output_format>
+輸出格式：`### 路徑` + fenced code block，依序輸出 2 個成品。
+最後輸出一行：「✅ Phase 5 完成 — 執行 `pnpm test --coverage` 確認覆蓋率 ≥ 70% 後，進行 Phase 6。」
+</output_format>
+
+
+------------------
+🟦 Phase 6 Prompt｜Docker 容器化 + 上線整合清單
+<context>
+## Phase 1–5 已完成，專案已可 `pnpm build && pnpm test` 通過。
+## 以下為容器化需求：
+- 多階段 Dockerfile（build stage → production stage）
+- production stage 不含 devDependencies、src/、tsconfig.json
+- log 目錄掛載至 host，供 audit log 持久化
+- 環境變數透過 .env 檔注入（docker compose --env-file）
+- MUST 設定 NODE_ENV=production、非 root user 執行
+</context>
+
+<task>
+產出 Phase 6 的所有成品，共 3 個檔案，以及 1 份整合清單：
+
+1. **`Dockerfile`**
+   - Stage 1（builder）：node:20-alpine、pnpm install --frozen-lockfile、pnpm build
+   - Stage 2（production）：
+     - 僅 COPY dist/、package.json、pnpm-lock.yaml
+     - pnpm install --prod --frozen-lockfile
+     - 建立非 root user（cds）並切換
+     - EXPOSE 3000
+     - HEALTHCHECK：GET /cds-services 每 30 秒一次
+     - CMD ["node", "dist/server.js"]
+
+2. **`docker-compose.yml`**
+   - services: app
+   - image: acs-cds-service:latest（使用 build context）
+   - env_file: .env
+   - ports: "3000:3000"
+   - volumes: ./logs:/app/logs（audit log 持久化）
+   - restart: unless-stopped
+   - healthcheck 與 Dockerfile 一致
+
+3. **`.env.example`**
+   - 列出所有環境變數（含說明註解）
+   - 敏感值以 CHANGE_ME 佔位
+   - 包含所有 env.ts 中定義之變數
+
+4. **上線前整合確認清單（12 項，繁體中文）**
+   輸出為 Markdown 表格，欄位：
+   | # | 確認項目 | 負責單位 | 說明 |
+   涵蓋：
+   - ValueSet OID 替換（12 個）
+   - Troponin 門檻值確認（TROPONIN_UPPER_LIMIT）
+   - ECG 結構化欄位可取得性確認
+   - 檢傷主訴資料是否已轉為 FHIR Observation
+   - Bearer Token 替換為正式 OAuth 2.0 機制
+   - CQL_ENGINE_URL 設定（若使用真實 CQL 引擎）
+   - HEART Score App URL 替換為院內實際工具
+   - 冷卻 Map 改為 Redis（多節點部署時）
+   - 規則上線前由急診科 + 心臟內科共同審閱
+   - 稽核 log 儲存路徑與保存年限確認
+   - HTTPS 憑證設定
+   - EHR 端 fallback 機制測試（CDS 服務逾時時主流程不中斷）
+</task>
+
+<constraints>
+- Dockerfile MUST 使用 pnpm，不得使用 npm 或 yarn
+- production stage MUST 不含 src/、*.ts 原始碼
+- .env.example MUST 包含所有 env.ts 中的變數，一個都不得遺漏
+- 不得輸出 Phase 1–5 的任何程式碼
+</constraints>
+
+<output_format>
+輸出格式：`### 路徑` + fenced code block，依序輸出 3 個成品，再輸出整合清單表格。
+最後輸出一行：「✅ Phase 6 完成 — 執行 `docker compose up --build` 並確認 HEALTHCHECK 通過，CDS 服務正式就緒。」
+</output_format>
+----
+

@@ -1,0 +1,39 @@
+{
+  "resourceType": "Bundle",
+  "type": "transaction",
+  "entry": [
+    {
+      "fullUrl": "urn:uuid:patient-tb-026",
+      "resource": {
+        "resourceType": "Patient",
+        "id": "patient-tb-026",
+        "name": [ { "family": "結核測試", "given": ["Completed180天內"] } ],
+        "gender": "female",
+        "birthDate": "1983-04-08"
+      },
+      "request": { "method": "PUT", "url": "Patient/patient-tb-026" }
+    },
+    {
+      "fullUrl": "urn:uuid:mr-tb026-isoniazid-completed",
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "mr-tb026-isoniazid-completed",
+        "status": "completed",
+        "intent": "order",
+        "medicationCodeableConcept": {
+          "coding": [
+            {
+              "system": "https://twcore.nsysu.edu.tw/ig/twcore/CodeSystem/medication-nhi-tw",
+              "code": "A048038100",
+              "display": "Isoniazid Tablets 300 mg"
+            }
+          ],
+          "text": "一線結核藥物（Isoniazid）— completed 90 天前"
+        },
+        "subject": { "reference": "Patient/patient-tb-026" },
+        "authoredOn": "2026-01-22T08:00:00.000Z"
+      },
+      "request": { "method": "PUT", "url": "MedicationRequest/mr-tb026-isoniazid-completed" }
+    }
+  ]
+}

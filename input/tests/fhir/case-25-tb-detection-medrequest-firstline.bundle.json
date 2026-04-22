@@ -1,0 +1,39 @@
+{
+  "resourceType": "Bundle",
+  "type": "transaction",
+  "entry": [
+    {
+      "fullUrl": "urn:uuid:patient-tb-025",
+      "resource": {
+        "resourceType": "Patient",
+        "id": "patient-tb-025",
+        "name": [ { "family": "結核測試", "given": ["MedRequest一線"] } ],
+        "gender": "male",
+        "birthDate": "1990-01-25"
+      },
+      "request": { "method": "PUT", "url": "Patient/patient-tb-025" }
+    },
+    {
+      "fullUrl": "urn:uuid:mr-tb025-ethambutol",
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "mr-tb025-ethambutol",
+        "status": "active",
+        "intent": "order",
+        "medicationCodeableConcept": {
+          "coding": [
+            {
+              "system": "https://twcore.nsysu.edu.tw/ig/twcore/CodeSystem/medication-nhi-tw",
+              "code": "A002076100",
+              "display": "RIOTOL TABLETS (Ethambutol)"
+            }
+          ],
+          "text": "一線結核藥物（Ethambutol）—MedicationRequest 路徑驗證"
+        },
+        "subject": { "reference": "Patient/patient-tb-025" },
+        "authoredOn": "2026-04-10T08:00:00.000Z"
+      },
+      "request": { "method": "PUT", "url": "MedicationRequest/mr-tb025-ethambutol" }
+    }
+  ]
+}

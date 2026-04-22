@@ -1,0 +1,29 @@
+{
+  "resourceType": "ValueSet",
+  "id": "hosp-tb-meds-firstline",
+  "url": "https://fhir.your-hosp.org.tw/ValueSet/tb-meds-firstline",
+  "version": "2.1",
+  "name": "HospTBMedsFirstLine",
+  "title": "院內結核一線藥物值集",
+  "status": "active",
+  "compose": {
+    "include": [
+      {
+        "system": "https://twcore.nsysu.edu.tw/ig/twcore/CodeSystem/medication-nhi-tw",
+        "concept": [
+          { "code": "A048038100", "display": "Isoniazid Tablets 300 mg" },
+          { "code": "BC22060100", "display": "RIFATER S.C.TAB (Rifampin/Isoniazid/Pyrazinamide)" },
+          { "code": "BC25518100", "display": "AKURIT-4 (Rifampin/Isoniazid/Pyrazinamide/Ethambutol)" },
+          { "code": "A002076100", "display": "RIOTOL TABLETS (Ethambutol)" },
+          { "code": "A003417209", "display": "STREPTOMYCIN SULFATE FOR INJECTION 1G" }
+        ]
+      },
+      {
+        "system": "https://fhir.your-hosp.org.tw/CodeSystem/local-drug-codes",
+        "concept": [
+          { "code": "LOCAL-RPT-150", "display": "RIFAPENTINE (RPT) 150 mg (院內自購藥)" }
+        ]
+      }
+    ]
+  }
+}

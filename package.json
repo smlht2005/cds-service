@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/server.ts",
+    "dev:emergency": "tsx watch src/emergency/server.ts",
     "start": "tsx src/server.ts",
+    "start:emergency": "tsx src/emergency/server.ts",
     "build": "tsc",
     "test:fhir": "tsx src/scripts/test-fhir-client.ts"
   },

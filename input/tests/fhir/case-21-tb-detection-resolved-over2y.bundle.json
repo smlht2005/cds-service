@@ -1,0 +1,49 @@
+{
+  "resourceType": "Bundle",
+  "type": "transaction",
+  "entry": [
+    {
+      "fullUrl": "urn:uuid:patient-tb-021",
+      "resource": {
+        "resourceType": "Patient",
+        "id": "patient-tb-021",
+        "name": [ { "family": "結核測試", "given": ["Resolved逾2年"] } ],
+        "gender": "female",
+        "birthDate": "1958-11-30"
+      },
+      "request": { "method": "PUT", "url": "Patient/patient-tb-021" }
+    },
+    {
+      "fullUrl": "urn:uuid:cond-tb021-a15-resolved-old",
+      "resource": {
+        "resourceType": "Condition",
+        "id": "cond-tb021-a15-resolved-old",
+        "clinicalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+              "code": "resolved"
+            }
+          ]
+        },
+        "verificationStatus": {
+          "coding": [
+            { "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status", "code": "confirmed" }
+          ]
+        },
+        "code": {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "A15",
+              "display": "Respiratory tuberculosis"
+            }
+          ]
+        },
+        "subject": { "reference": "Patient/patient-tb-021" },
+        "abatementDateTime": "2023-04-22T00:00:00.000Z"
+      },
+      "request": { "method": "PUT", "url": "Condition/cond-tb021-a15-resolved-old" }
+    }
+  ]
+}

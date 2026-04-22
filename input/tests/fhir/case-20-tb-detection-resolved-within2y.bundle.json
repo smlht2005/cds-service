@@ -1,0 +1,49 @@
+{
+  "resourceType": "Bundle",
+  "type": "transaction",
+  "entry": [
+    {
+      "fullUrl": "urn:uuid:patient-tb-020",
+      "resource": {
+        "resourceType": "Patient",
+        "id": "patient-tb-020",
+        "name": [ { "family": "結核測試", "given": ["Resolved近2年"] } ],
+        "gender": "male",
+        "birthDate": "1965-07-20"
+      },
+      "request": { "method": "PUT", "url": "Patient/patient-tb-020" }
+    },
+    {
+      "fullUrl": "urn:uuid:cond-tb020-a15-resolved",
+      "resource": {
+        "resourceType": "Condition",
+        "id": "cond-tb020-a15-resolved",
+        "clinicalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+              "code": "resolved"
+            }
+          ]
+        },
+        "verificationStatus": {
+          "coding": [
+            { "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status", "code": "confirmed" }
+          ]
+        },
+        "code": {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "A15",
+              "display": "Respiratory tuberculosis, bacteriologically and histologically confirmed"
+            }
+          ]
+        },
+        "subject": { "reference": "Patient/patient-tb-020" },
+        "abatementDateTime": "2024-10-22T00:00:00.000Z"
+      },
+      "request": { "method": "PUT", "url": "Condition/cond-tb020-a15-resolved" }
+    }
+  ]
+}

@@ -1,0 +1,45 @@
+{
+  "resourceType": "Bundle",
+  "type": "transaction",
+  "entry": [
+    {
+      "fullUrl": "urn:uuid:patient-tb-018",
+      "resource": {
+        "resourceType": "Patient",
+        "id": "patient-tb-018",
+        "name": [ { "family": "結核測試", "given": ["接觸者"] } ],
+        "gender": "male",
+        "birthDate": "1995-11-01"
+      },
+      "request": { "method": "PUT", "url": "Patient/patient-tb-018" }
+    },
+    {
+      "fullUrl": "urn:uuid:cond-tb018-z201",
+      "resource": {
+        "resourceType": "Condition",
+        "id": "cond-tb018-z201",
+        "clinicalStatus": {
+          "coding": [
+            { "system": "http://terminology.hl7.org/CodeSystem/condition-clinical", "code": "active" }
+          ]
+        },
+        "verificationStatus": {
+          "coding": [
+            { "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status", "code": "confirmed" }
+          ]
+        },
+        "code": {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z20.1",
+              "display": "Contact with and (suspected) exposure to tuberculosis"
+            }
+          ]
+        },
+        "subject": { "reference": "Patient/patient-tb-018" }
+      },
+      "request": { "method": "PUT", "url": "Condition/cond-tb018-z201" }
+    }
+  ]
+}

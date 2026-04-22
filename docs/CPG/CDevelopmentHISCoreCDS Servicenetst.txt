@@ -1,0 +1,22 @@
+C:\Development\HISCore\CDS Service>netstat -ano | findstr 3001
+  TCP    0.0.0.0:3001           0.0.0.0:0              LISTENING       43528
+
+C:\Development\HISCore\CDS Service>taskkill /pid 43528 /f
+成功: 處理程序 PID 43528 已經終止了。
+
+
+
+npm run dev:emergency
+
+> cds-service@0.1.0 dev:emergency
+> tsx watch src/emergency/server.ts
+
+{"level":30,"time":1776649394561,"pid":55068,"hostname":"hungtao-liu1","msg":"Server listening at http://127.0.0.1:3001"}
+{"level":30,"time":1776649394561,"pid":55068,"hostname":"hungtao-liu1","msg":"Server listening at http://169.254.22.139:3001"}
+{"level":30,"time":1776649394561,"pid":55068,"hostname":"hungtao-liu1","msg":"Server listening at http://172.31.3.19:3001"}
+{"level":30,"time":1776649394561,"pid":55068,"hostname":"hungtao-liu1","msg":"Server listening at http://172.25.16.1:3001"}
+{"level":30,"time":1776649394561,"pid":55068,"hostname":"hungtao-liu1","msg":"Server listening at http://172.18.240.1:3001"}
+{"level":30,"time":1776649394561,"pid":55068,"hostname":"hungtao-liu1","msg":"Emergency CDS Service listening on http://0.0.0.0:3001"}
+
+
+----

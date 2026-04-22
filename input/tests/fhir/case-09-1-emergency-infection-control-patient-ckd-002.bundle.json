@@ -1,0 +1,110 @@
+{
+  "resourceType": "Bundle",
+  "type": "transaction",
+  "entry": [
+    {
+      "fullUrl": "urn:uuid:patient-ckd-002",
+      "resource": {
+        "resourceType": "Patient",
+        "id": "patient-ckd-002",
+        "active": true,
+        "name": [
+          {
+            "use": "official",
+            "family": "Case091",
+            "given": ["HIR-InfectionControl"]
+          }
+        ],
+        "gender": "unknown",
+        "birthDate": "1980-01-01"
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Patient/patient-ckd-002"
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:flag-ckd002-hir-note",
+      "resource": {
+        "resourceType": "Flag",
+        "id": "flag-ckd002-hir-note",
+        "status": "active",
+        "code": {
+          "text": "HIR：病患歷史特殊註記（感控／列管測試）"
+        },
+        "subject": {
+          "reference": "Patient/patient-ckd-002"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Flag/flag-ckd002-hir-note"
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:ms-ckd002-arv",
+      "resource": {
+        "resourceType": "MedicationStatement",
+        "id": "ms-ckd002-arv",
+        "status": "active",
+        "medicationCodeableConcept": {
+          "coding": [
+            {
+              "system": "http://www.whocc.no/atc",
+              "code": "J05AR02",
+              "display": "Example ARV fixed-dose combination (ATC J05* for CDS test)"
+            }
+          ],
+          "text": "HIR：抗病毒／ARV 領藥紀錄（測試）"
+        },
+        "subject": {
+          "reference": "Patient/patient-ckd-002"
+        },
+        "effectiveDateTime": "2026-04-19T10:00:00.000Z"
+      },
+      "request": {
+        "method": "PUT",
+        "url": "MedicationStatement/ms-ckd002-arv"
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:cond-ckd002-hiv-b22",
+      "resource": {
+        "resourceType": "Condition",
+        "id": "cond-ckd002-hiv-b22",
+        "clinicalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+              "code": "active"
+            }
+          ]
+        },
+        "verificationStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+              "code": "confirmed"
+            }
+          ]
+        },
+        "code": {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10",
+              "code": "B22.7",
+              "display": "HIV disease resulting in multiple diseases (test)"
+            }
+          ]
+        },
+        "subject": {
+          "reference": "Patient/patient-ckd-002"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Condition/cond-ckd002-hiv-b22"
+      }
+    }
+  ]
+}
