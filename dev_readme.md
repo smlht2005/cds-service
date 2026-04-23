@@ -1,4 +1,16 @@
 <!--
+更新時間：2026-04-22 17:50
+作者：CDS Service
+摘要：PR #3 follow-up review 修正（Issue 1 精確計數 + .env.example HTML comment）：
+      1. CQL 新增四個精確計數 define：TbActiveDiagnosisCount / TbLatentDiagnosisCount /
+         TbContactCount / TbInfectionFlagCount，各自對應布林 define 的 where 條件；
+         Maven 重編 ELM — BUILD SUCCESS。
+      2. EmergencyTbDetectionElmResult 介面新增四欄位；executor return 對應讀取。
+      3. tbDetectionHookHandler.ts ELM reasons 全改用精確計數欄位，
+         消除 TbDiagnosisCount 膨脹以及 TS-side count 在 ELM mode 下為 0 的語意矛盾。
+      4. .env.example 頂部 <!-- --> HTML 區塊改為 # 格式（dotenv 標準）。
+      TS build 綠燈；lint 0 錯誤；case-14~28 驗收 15/15 PASS。
+
 更新時間：2026-04-22 17:37
 作者：CDS Service
 摘要：PR #3 Copilot review 全數修正（Issue 1～8）：

@@ -1,4 +1,10 @@
 /*
+ * 更新時間：2026-04-22 17:50
+ * 作者：CDS Service
+ * 摘要：PR #3 follow-up：新增 TbActiveDiagnosisCount / TbLatentDiagnosisCount / TbContactCount /
+ *       TbInfectionFlagCount 四個精確計數欄位至 EmergencyTbDetectionElmResult，
+ *       對應 CQL 中新增的同名 define，讓 handler ELM reasons 使用正確計數（非 TbDiagnosisCount 膨脹值）。
+ *
  * 更新時間：2026-04-22 10:54
  * 作者：CDS Service
  * 摘要：Phase 3.3 — 新增 observations 輸入與 TbLabObservationCount 回傳（讓 ELM 成為 TB-Lab-Monitoring 的真相來源）。
@@ -37,7 +43,16 @@ export interface EmergencyTbDetectionElmResult {
   hasFirstLineTbMed: boolean;
   hasSecondLineTbMedWithTbDx: boolean;
   hasInfectionControlFlag: boolean;
+  /** 全量 TB-Diagnoses 計數（含所有子類型）；detail 顯示請用精確計數欄位。 */
   tbDiagnosisCount: number;
+  /** 精確計數：Active TB（A15–A19 / Z16.34），含 resolved 近 2 年。 */
+  tbActiveDiagnosisCount: number;
+  /** 精確計數：LTBI（R76.1）active 條件。 */
+  tbLatentDiagnosisCount: number;
+  /** 精確計數：TB Contact（Z20.1）active 條件。 */
+  tbContactCount: number;
+  /** 精確計數：active Flag 且含有效 code。 */
+  tbInfectionFlagCount: number;
   tbFirstLineMedCount: number;
   tbSecondLineMedCount: number;
   tbLabObservationCount: number;
@@ -155,6 +170,10 @@ export async function evaluateEmergencyTbDetectionWithElm(
     hasSecondLineTbMedWithTbDx: asBoolean(exprs?.HasSecondLineTbMedWithTbDx),
     hasInfectionControlFlag: asBoolean(exprs?.HasInfectionControlFlag),
     tbDiagnosisCount: asInt(exprs?.TbDiagnosisCount),
+    tbActiveDiagnosisCount: asInt(exprs?.TbActiveDiagnosisCount),
+    tbLatentDiagnosisCount: asInt(exprs?.TbLatentDiagnosisCount),
+    tbContactCount: asInt(exprs?.TbContactCount),
+    tbInfectionFlagCount: asInt(exprs?.TbInfectionFlagCount),
     tbFirstLineMedCount: asInt(exprs?.TbFirstLineMedCount),
     tbSecondLineMedCount: asInt(exprs?.TbSecondLineMedCount),
     tbLabObservationCount: asInt(exprs?.TbLabObservationCount),

@@ -1,4 +1,11 @@
 /*
+ * 更新時間：2026-04-22 17:50
+ * 作者：CDS Service
+ * 摘要：PR #3 follow-up review：新增四個精確計數 define
+ *       TbActiveDiagnosisCount / TbLatentDiagnosisCount / TbContactCount / TbInfectionFlagCount，
+ *       各自對應布林 define 的 where 條件，避免 TbDiagnosisCount 膨脹計入其他類型，
+ *       以及 ELM 觸發但 TS-side count 為 0 時語意矛盾的問題。
+ *
  * 更新時間：2026-04-22 10:52
  * 作者：CDS Service
  * 摘要：Phase 3.3 — 新增 define "TbLabObservationCount"（Count([Observation: "TB-Lab-Monitoring"])）；
@@ -195,8 +202,79 @@ define "PatientHasTBOrLTBI":
 // 資源擷取：輸出結構化摘要供 CDS Cards detail 使用
 // ══════════════════════════════════════════════════════════════
 
+/*
+ * 全量 TB-Diagnoses 計數（包含 Active / LTBI / Contact 所有類型）。
+ * 僅供 ELM extension 欄位總計用；CDS reason 顯示請使用下方精確計數 define。
+ */
 define "TbDiagnosisCount":
   Count([Condition: "TB-Diagnoses"])
+
+/*
+ * 精確計數：僅計 Active TB（A15–A19 / Z16.34）條件
+ * 邏輯對應 HasActiveTbDiagnosis（包含 resolved 近 2 年內）。
+ */
+define "TbActiveDiagnosisCount":
+  Count(
+    [Condition: "TB-Diagnoses"] C
+      where (
+        exists (
+          C.code.coding CC
+            where Matches(Upper(ReplaceMatches(CC.code.value, '\\.', '')), '^A1[5-9].*')
+              or Upper(ReplaceMatches(CC.code.value, '\\.', '')) = 'Z1634'
+        )
+      )
+        and (
+          C.clinicalStatus ~ "Clinical-Active"
+            or (
+              C.clinicalStatus ~ "Clinical-Resolved"
+                and (C.abatement as FHIR.dateTime) >= Today() - 2 years
+            )
+        )
+  )
+
+/*
+ * 精確計數：僅計 LTBI（R76.1）active 條件
+ * 邏輯對應 HasLatentTbDiagnosis。
+ */
+define "TbLatentDiagnosisCount":
+  Count(
+    [Condition: "TB-Diagnoses"] C
+      where exists (
+        C.code.coding CC
+          where Upper(ReplaceMatches(CC.code.value, '\\.', '')) = 'R761'
+      )
+        and C.clinicalStatus ~ "Clinical-Active"
+  )
+
+/*
+ * 精確計數：僅計 TB Contact（Z20.1）active 條件
+ * 邏輯對應 IsTbContact。
+ */
+define "TbContactCount":
+  Count(
+    [Condition: "TB-Diagnoses"] C
+      where exists (
+        C.code.coding CC
+          where Upper(ReplaceMatches(CC.code.value, '\\.', '')) = 'Z201'
+      )
+        and C.clinicalStatus ~ "Clinical-Active"
+  )
+
+/*
+ * 精確計數：active Flag 且含有效 code（對應 HasInfectionControlFlag）。
+ * 使用 [Flag]（不綁 ValueSet）與布林 define 保持一致。
+ */
+define "TbInfectionFlagCount":
+  Count(
+    [Flag] F
+      where F.status is not null
+        and FHIRHelpers.ToString(F.status) = 'active'
+        and F.code is not null
+        and (
+          (F.code.text is not null and Length(F.code.text.value) > 0)
+            or exists(F.code.coding)
+        )
+  )
 
 define "TbFirstLineMedCount":
   Count([MedicationRequest: medication in "TB-Meds-FirstLine"])
