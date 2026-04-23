@@ -1,4 +1,9 @@
 <!--
+更新時間：2026-04-23 11:23
+作者：CDS Service
+摘要：README.md 全面更新並與 master（PR #2/#3 已合併）對齊：主 CDS 三服務、急診三服務、CQL/ELM、
+      TB 測試矩陣、環境變數索引、目錄結構；已 commit & push。
+
 更新時間：2026-04-22 17:50
 作者：CDS Service
 摘要：PR #3 follow-up review 修正（Issue 1 精確計數 + .env.example HTML comment）：
