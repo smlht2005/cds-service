@@ -1,0 +1,48 @@
+{
+  "resourceType": "Bundle",
+  "type": "transaction",
+  "entry": [
+    {
+      "fullUrl": "urn:uuid:patient-tb-023",
+      "resource": {
+        "resourceType": "Patient",
+        "id": "patient-tb-023",
+        "name": [ { "family": "結核測試", "given": ["Z16.34抗藥性TB"] } ],
+        "gender": "male",
+        "birthDate": "1968-09-05"
+      },
+      "request": { "method": "PUT", "url": "Patient/patient-tb-023" }
+    },
+    {
+      "fullUrl": "urn:uuid:cond-tb023-z1634",
+      "resource": {
+        "resourceType": "Condition",
+        "id": "cond-tb023-z1634",
+        "clinicalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+              "code": "active"
+            }
+          ]
+        },
+        "verificationStatus": {
+          "coding": [
+            { "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status", "code": "confirmed" }
+          ]
+        },
+        "code": {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z16.34",
+              "display": "Resistance to antituberculous drug(s)"
+            }
+          ]
+        },
+        "subject": { "reference": "Patient/patient-tb-023" }
+      },
+      "request": { "method": "PUT", "url": "Condition/cond-tb023-z1634" }
+    }
+  ]
+}

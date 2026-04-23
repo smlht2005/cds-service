@@ -1,4 +1,8 @@
 <!--
+更新時間：2026-04-21 09:12
+作者：CDS Service
+摘要：QA 索引補連結：`fe_extract_hook_builders_qa.md`（mixed hooks hookBuilders 與 App 整合說明）
+
 更新時間：2026-04-16 10:28
 作者：CDS Service
 摘要：ckd-risk v1 改為預設 hybrid（prefetch 可省略，伺服端向 FHIR 取資料）；同步調整前端驗證敘述
@@ -113,6 +117,7 @@ mvn -f scripts/cql-compile-pom.xml exec:java "-Dexec.args=--input cql/EGFR_Check
 
 ## 相關文件
 
+- [`docs/qa/fe_extract_hook_builders_qa.md`](fe_extract_hook_builders_qa.md) — **`fe-extract-hook-builders`**：`observation-create`／`order-select` hookBuilders、App 整合與 Discovery 限制
 - [`docs/qa/ui_operation_qa.md`](ui_operation_qa.md) — **CDS Hook UI 操作與 Prefetch 開關對照（詳細 QA）**
 - [`docs/CDS_Hook_UI_Operation.md`](../CDS_Hook_UI_Operation.md) — CDS Hook 前端 UI 操作說明（控制列、prefetch、RuleEngine）
 - [`docs/cql_elm.md`](../cql_elm.md) — CQL→ELM 流程、VS Code／Maven 指令

@@ -1,0 +1,45 @@
+{
+  "resourceType": "Bundle",
+  "type": "transaction",
+  "entry": [
+    {
+      "fullUrl": "urn:uuid:patient-tb-017",
+      "resource": {
+        "resourceType": "Patient",
+        "id": "patient-tb-017",
+        "name": [ { "family": "結核測試", "given": ["Flag-only"] } ],
+        "gender": "female",
+        "birthDate": "1990-07-20"
+      },
+      "request": { "method": "PUT", "url": "Patient/patient-tb-017" }
+    },
+    {
+      "fullUrl": "urn:uuid:flag-tb017-ic",
+      "resource": {
+        "resourceType": "Flag",
+        "id": "flag-tb017-ic",
+        "status": "active",
+        "category": [
+          {
+            "coding": [
+              { "system": "http://terminology.hl7.org/CodeSystem/flag-category", "code": "safety" }
+            ],
+            "text": "感染管制"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "https://fhir.your-hosp.org.tw/CodeSystem/local-flag-codes",
+              "code": "IC-TB-CONTACT",
+              "display": "疑似結核接觸者隔離註記"
+            }
+          ],
+          "text": "感控測試註記"
+        },
+        "subject": { "reference": "Patient/patient-tb-017" }
+      },
+      "request": { "method": "PUT", "url": "Flag/flag-tb017-ic" }
+    }
+  ]
+}

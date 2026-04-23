@@ -1,4 +1,7 @@
 # --- 依專案既有規則保留 ---
+# Git 操作備忘／本機流程說明（不納版控；已追蹤檔需先 `git rm -r --cached docs/git/` 才會停止追蹤）
+docs/git/
+
 node_modules/
 dist/
 scripts/target/

@@ -1,4 +1,24 @@
 /*
+ * 更新時間：2026-04-20 17:58
+ * 作者：CDS Service
+ * 摘要：補強 TT 型別為 Record<string,string>，避免 UI 使用新增 tooltip key 時的型別快取誤判
+ *
+ * 更新時間：2026-04-20 17:55
+ * 作者：CDS Service
+ * 摘要：mixed hooks 文案：新增 observation-create / order-select 的 Context Builder tooltip（取代通用 Context JSON 說明）
+ *
+ * 更新時間：2026-04-20 17:18
+ * 作者：CDS Service
+ * 摘要：補充急診服務 Prefetch 文案（72hr-revisit / infection-control-warning）
+ *
+ * 更新時間：2026-04-20 16:55
+ * 作者：CDS Service
+ * 摘要：Prefetch 開關提示文案：未實作服務改為明示「前端 prefetch 尚未支援」
+ *
+ * 更新時間：2026-04-20 15:41
+ * 作者：CDS Service
+ * 摘要：UI 擴充支援急診 CDS（target 切換）與 mixed hooks 的說明文案
+ *
  * 更新時間：2026-04-16 14:12
  * 作者：CDS Service
  * 摘要：UI 文案補上 ckd-comprehensive（第三服務）與其 Prefetch/Discovery 鍵說明
@@ -17,13 +37,17 @@ export const APP_SUBTITLE = 'patient-view · HL7 CDS Hooks · 臨床決策支援
 export const APP_DESCRIPTION =
   '模擬電子病歷在「病患檢視」時觸發 CDS：向本機 CDS Service 送出 Hook，檢視回傳卡片與規則引擎。開發模式下經 Vite 代理連線 FHIR 與 CDS，無需處理 CORS。';
 
-export const TT = {
+export const TT: Record<string, string> = {
   /** 標題列圖示 */
   brandIcon: '臨床決策支援（CDS Hooks）測試工具：模擬 EHR 呼叫後端服務',
 
   /** CDS 服務 */
   cdsService:
-    '選擇要測試的 CDS 服務：egfr-check（eGFR 複查建議）、ckd-risk（CKD 風險與檢驗提醒；hybrid）或 ckd-comprehensive（CKD 綜合規則：CPG + risk + testing；hybrid）。',
+    '選擇要測試的 CDS 服務（由 Discovery 動態載入）。不同服務可能有不同 hook type（patient-view / observation-create / order-select）。',
+
+  /** 目標 CDS */
+  cdsTarget:
+    '選擇要呼叫的 CDS server 目標：主 CDS（port 3000）或急診 CDS（port 3001）。開發模式下由 Vite proxy 轉發，避免 CORS。',
 
   /** 服務說明（顯示於 UI） */
   serviceExplainEgfr:
@@ -49,6 +73,14 @@ export const TT = {
   prefetchCkd:
     '適用 ckd-risk / ckd-comprehensive：開啟時前端會先向 FHIR 取得 Patient/Condition/Observation（ckd-comprehensive 另加 latestEgfr）組成 prefetch（較貼近 EHR 實作）；關閉時只送 patientId，由 CDS 後端以 hybrid 模式向 FHIR 取資料補齊。',
 
+  /** Prefetch unsupported */
+  prefetchUnsupported:
+    '此服務目前尚未實作「前端先向 FHIR 組 prefetch」：即使開啟，本次請求仍只會送出 context（patientId 等），由後端自行查 FHIR（hybrid）。',
+
+  /** Prefetch emergency */
+  prefetchEmergency:
+    '急診服務：開啟時前端會先向 FHIR 取得 Patient 與此服務所需資源（72hr-revisit：recentEncounters；infection-control-warning：flags/medicationStatements/conditions；tb-detection：conditions/medicationRequests/medicationStatements/flags/observations）組成 prefetch；關閉時改由後端自行查 FHIR（hybrid）。',
+
   /** Discovery 鍵 Chip */
   discoveryKeysChip:
     '本次請求將帶入 prefetch 欄位：patient、latestEgfr、latestCreatinine，與 Discovery 範本一致，供後端優先使用。',
@@ -68,6 +100,18 @@ export const TT = {
   /** 立即呼叫 */
   callHook:
     '手動送出 POST /cds-services/{服務}。若 FHIR 資料剛更新，請按此強制重送以取得最新卡片。',
+
+  /** Hook context（非 patient-view 時） */
+  hookContextJson:
+    '當服務 hook 不是 patient-view 且尚無對應表單時，請在此填入 context JSON。系統會與 patientId（若有）合併送出。',
+
+  /** observation-create：Context Builder */
+  hookContextObservationCreate:
+    'observation-create：請提供 context.observation（FHIR Observation）所需最小欄位（resourceType=Observation、code、valueQuantity 或 valueCodeableConcept、effectiveDateTime、subject）。您可先按「套用 Observation 範本」預填，再依需求調整。',
+
+  /** order-select：Context Builder */
+  hookContextOrderSelect:
+    'order-select：請提供 draftOrders（FHIR Bundle）與 selections（array）。您可先按「套用 Order 範本」預填，再依需求調整 draftOrders.entry 與 selections。',
 
   /** RuleEngine Chip */
   ruleEngine:

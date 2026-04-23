@@ -1,4 +1,8 @@
 <!--
+更新時間：2026-04-20 13:57
+作者：CDS Service
+摘要：補急診 Infection_Control_Warning、Emergency_72h_Revisit 之 Maven 編譯範例行
+
 更新時間：2026-04-15 12:11
 作者：CDS Service
 摘要：相關文件加入 docs/qa/README.md（CQL／ELM／UCUM QA 紀錄）
@@ -67,6 +71,14 @@ mvn -f scripts/cql-compile-pom.xml exec:java "-Dexec.args=--input cql/EGFR_Check
 ```
 
 編譯成功後，請確認 **`elm/EGFR_Check.json`** 已生成且可被 JSON 解析。
+
+### 急診獨立 CDS（`infection-control-warning`／`72hr-revisit`）
+
+```powershell
+cd "c:\Development\HISCore\CDS Service"
+mvn -f scripts/cql-compile-pom.xml exec:java "-Dexec.args=--input cql/Infection_Control_Warning.cql --output elm/Infection_Control_Warning.json --format JSON"
+mvn -f scripts/cql-compile-pom.xml exec:java "-Dexec.args=--input cql/Emergency_72h_Revisit.cql --output elm/Emergency_72h_Revisit.json --format JSON"
+```
 
 ---
 

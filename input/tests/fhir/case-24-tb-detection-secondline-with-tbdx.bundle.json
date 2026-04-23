@@ -1,0 +1,70 @@
+{
+  "resourceType": "Bundle",
+  "type": "transaction",
+  "entry": [
+    {
+      "fullUrl": "urn:uuid:patient-tb-024",
+      "resource": {
+        "resourceType": "Patient",
+        "id": "patient-tb-024",
+        "name": [ { "family": "結核測試", "given": ["二線藥+TB診斷"] } ],
+        "gender": "female",
+        "birthDate": "1979-06-18"
+      },
+      "request": { "method": "PUT", "url": "Patient/patient-tb-024" }
+    },
+    {
+      "fullUrl": "urn:uuid:cond-tb024-a15",
+      "resource": {
+        "resourceType": "Condition",
+        "id": "cond-tb024-a15",
+        "clinicalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+              "code": "active"
+            }
+          ]
+        },
+        "verificationStatus": {
+          "coding": [
+            { "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status", "code": "confirmed" }
+          ]
+        },
+        "code": {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "A15",
+              "display": "Respiratory tuberculosis, bacteriologically and histologically confirmed"
+            }
+          ]
+        },
+        "subject": { "reference": "Patient/patient-tb-024" }
+      },
+      "request": { "method": "PUT", "url": "Condition/cond-tb024-a15" }
+    },
+    {
+      "fullUrl": "urn:uuid:mr-tb024-bedaquiline",
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "mr-tb024-bedaquiline",
+        "status": "active",
+        "intent": "order",
+        "medicationCodeableConcept": {
+          "coding": [
+            {
+              "system": "https://twcore.nsysu.edu.tw/ig/twcore/CodeSystem/medication-nhi-tw",
+              "code": "B024015100",
+              "display": "Bedaquiline 100 mg"
+            }
+          ],
+          "text": "二線結核藥物（Bedaquiline）"
+        },
+        "subject": { "reference": "Patient/patient-tb-024" },
+        "authoredOn": "2026-04-01T08:00:00.000Z"
+      },
+      "request": { "method": "PUT", "url": "MedicationRequest/mr-tb024-bedaquiline" }
+    }
+  ]
+}

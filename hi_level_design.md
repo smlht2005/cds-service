@@ -1,4 +1,8 @@
 <!--
+更新時間：2026-04-20 13:57
+作者：CDS Service
+摘要：急診獨立 CDS 納入 CQL／ELM（與主程式共用 USE_ELM）；補 executor 與規則檔路徑
+
 更新時間：2026-04-15 11:11
 作者：CDS Service
 摘要：補充 docs/cql_elm.md 連結（CQL→ELM 編譯文件）
@@ -119,6 +123,14 @@ sequenceDiagram
 
 - **FHIR 錯誤**：在 `fhirClient` 統一解析 OperationOutcome 並轉成可讀錯誤訊息。
 - **Service 端點錯誤**：目前 `POST /cds-services/ckd-risk` 出錯時回 `502`，body 為簡化 OperationOutcome（之後可再細分 4xx/5xx）。
+
+### 急診獨立 CDS 與 CQL／ELM（第二程序）
+
+- **程式入口**：[`src/emergency/server.ts`](src/emergency/server.ts)（預設埠見 `.env.example` 之 `EMERGENCY_CDS_PORT`）。
+- **Hook**：`infection-control-warning`、`72hr-revisit`（[`src/emergency/handlers/infectionControlHookHandler.ts`](src/emergency/handlers/infectionControlHookHandler.ts)、[`revisit72hHookHandler.ts`](src/emergency/handlers/revisit72hHookHandler.ts)）。
+- **規則來源（CQL→ELM）**：[`cql/Infection_Control_Warning.cql`](cql/Infection_Control_Warning.cql)、[`cql/Emergency_72h_Revisit.cql`](cql/Emergency_72h_Revisit.cql)；產物 [`elm/Infection_Control_Warning.json`](elm/Infection_Control_Warning.json)、[`elm/Emergency_72h_Revisit.json`](elm/Emergency_72h_Revisit.json)。
+- **與主 CDS 關係**：急診與主程式**共用**環境變數 **`USE_ELM`**（[`src/cds/utils.ts`](src/cds/utils.ts) 之 `getUseElm()`）；`true` 時兩程序各自以 ELM 評估，失敗則 **TS_FALLBACK** 並於 cards 加 **`urn:cds-service:rule-engine`**。
+- **執行模組**：[`src/cql/emergencyInfectionControlElmExecutor.ts`](src/cql/emergencyInfectionControlElmExecutor.ts)、[`src/cql/emergency72hRevisitElmExecutor.ts`](src/cql/emergency72hRevisitElmExecutor.ts)。
 
 ### 下一階段預告
 

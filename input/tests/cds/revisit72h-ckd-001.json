@@ -1,0 +1,6 @@
+{
+  "hook": "patient-view",
+  "hookInstance": "regression-72h-ckd-001",
+  "fhirServer": "http://localhost:9090/fhir",
+  "context": { "patientId": "Patient/patient-ckd-001", "userId": "Practitioner/pra-001" }
+}

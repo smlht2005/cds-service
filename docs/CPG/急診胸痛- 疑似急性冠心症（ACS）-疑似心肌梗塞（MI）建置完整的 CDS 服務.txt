@@ -1,0 +1,94 @@
+<context>
+你是一位資深 CDS Hooks 架構師與 HL7 FHIR R4 工程師，專精於急診醫學之臨床決策支援系統。
+你正在為「急診胸痛／疑似急性冠心症（ACS）／疑似心肌梗塞（MI）」建置完整的 CDS 服務。
+
+## 已鎖定之架構決策：
+- 標準：CDS Hooks 2.0（HL7）
+- 臨床邏輯：CQL（Clinical Quality Language）搭配 FHIR R4
+- FHIR 版本：4.0.1 含 FHIRHelpers
+- 執行環境：Node.js 20 LTS + Fastify 4.x + TypeScript 5.x（strict mode）
+- 套件管理：pnpm
+- 測試框架：Vitest + @fastify/inject
+- 所有 CQL Library 使用佔位符值集（urn:oid:example.*），正式上線前由院方替換
+- 治理原則：CDS 服務失敗時 MUST NOT 阻斷主要臨床作業（graceful degradation）
+- 認證方式：Bearer Token / OAuth 2.0
+
+## 已設計完成之 CQL Library（共 5 個）：
+1. ACSCommonLogic — 共用高風險背景判斷邏輯
+2. ChestPainScreenLogic — R1 疑似 ACS 初始辨識（依賴 ACSCommonLogic）
+3. ACSWorkupCompletenessLogic — R2（ECG+Troponin 皆未完成）與 R3（僅完成其中一項）（依賴 ChestPainScreenLogic）
+4. ACSResultEscalationLogic — R4 異常結果升級提醒
+5. ACSRiskHistoryBannerLogic — R5 高風險背景提示（依賴 ACSCommonLogic）
+
+## 6 條規則定義：
+- R1：疑似 ACS 初始辨識 → patient-view hook → warning 卡片
+- R2：ECG 與 Troponin 皆未完成 → patient-view / order-select → suggestion 卡片
+- R3：ECG / Troponin 僅完成其中一項 → patient-view / order-select → warning 卡片
+- R4：Troponin 異常或 ECG 缺血性變化 → patient-view → critical 卡片
+- R5：高風險背景提示 → patient-view → info 卡片
+- R6：外部 HEART Score 工具連結 → patient-view → app link 卡片
+
+## 4 個 CDS Service 端點：
+- GET  /cds-services
+- POST /cds-services/acs-triage-screen      （hook: patient-view）
+- POST /cds-services/acs-workup-check       （hook: order-select）
+- POST /cds-services/acs-result-escalation  （hook: patient-view）
+
+## 消耗之 FHIR Resources：
+Patient、Encounter、Condition、Observation、ServiceRequest、Procedure、MedicationStatement、MedicationRequest
+
+## PlanDefinition / ActivityDefinition 對應：
+- ACSInitialAssessmentPlan、ACSResultEscalationPlan
+- Activities：Perform12LeadECG、OrderTroponin、NotifyEDPhysician、LaunchHeartScoreApp
+
+## 稽核需求：
+每次呼叫均需記錄：hook 觸發時間、觸發條件摘要、回傳卡片內容、使用者操作結果（採納／忽略／關閉）。
+
+## 例外處理：
+- 逾時／認證失敗／資料格式異常 → 記錄錯誤，回傳空 cards []，絕不對 EHR 拋出 HTTP 500
+- 重複抑制：同一病人同一規則於可設定的冷卻視窗內（預設 15 分鐘）不重複顯示
+- 資料不足 → 回傳 info 卡片，說明「資料不足，請補充必要評估資訊」
+</context>
+
+<task>
+依照上述規格，實作完整的 CDS 服務。請依序產出以下所有成品：
+
+1. **專案骨架** — 完整目錄樹，列出所有檔案路徑
+2. **tsconfig.json** — strict mode，ESM，路徑別名 `@/` 指向 `src/`
+3. **package.json** — 列出所有相依套件（fastify、@fastify/auth、zod、pino、vitest 等）
+4. **Fastify 應用主程式** — `src/app.ts`，含 plugin 註冊、CORS、auth hook、全域錯誤處理器、pino logger
+5. **路由層** — `src/routes/cdsServices.ts`，實作 4 個端點，含 Zod schema 驗證 request body
+6. **FHIR Prefetch Query Builder** — `src/fhir/prefetchBuilder.ts`，依各 hook 建構所需 FHIR R4 查詢
+7. **CQL 規則評估器 Stub** — `src/cql/ruleEngine.ts`，介面接受病人 FHIR Bundle + ruleId，回傳 boolean（以 TODO 標記真實 CQL 引擎整合點，stub 邏輯需與 CQL define 名稱完全對應）
+8. **卡片產生器** — `src/cards/cardBuilder.ts`，依 R1–R6 產出符合 CDS Hooks 規格之卡片 JSON，含 summary、detail、indicator、source、suggestions（含 actions）
+9. **型別定義** — `src/types/cdsHooks.ts`，完整 TypeScript interface 涵蓋 CDS Hooks 2.0 request／response 結構
+10. **稽核 Logger** — `src/audit/auditLogger.ts`，每次呼叫寫入結構化 JSON 稽核紀錄
+11. **環境變數設定** — `src/config/env.ts`，含 TROPONIN_UPPER_LIMIT（預設 0.04）、CDS_COOLDOWN_MINUTES（預設 15）、CQL_ENGINE_URL（選填，未設定時使用 stub）
+12. **單元測試** — `src/tests/rules.test.ts`，使用 Vitest，每條規則（R1–R6）各含至少一個通過與一個失敗情境，搭配 mock FHIR Bundle
+13. **Docker Compose** — `docker-compose.yml`，包含 app 服務與 log volume 掛載
+14. **Dockerfile** — 多階段建置（build stage + production stage），不含 devDependencies
+
+MUST 使用以下 CDS Hooks card indicator 值：`info`、`warning`、`critical`
+MUST NOT 使用 `indicator: "error"`（非 CDS Hooks 合法值）
+MUST 在服務失敗時回傳 HTTP 200 與空 `{"cards": []}`，絕不回傳 HTTP 500
+MUST 在每張卡片中包含 `source.label` 與 `source.url`
+MUST 無論是否有卡片產出，均記錄每次呼叫之稽核紀錄
+MUST 所有 ValueSet OID 以 `urn:oid:example.*` 格式佔位，並以行內註解標記「// 院方上線前替換」
+</task>
+
+<constraints>
+- Node.js 20 LTS、Fastify 4.x、TypeScript 5.x strict mode、pnpm
+- 禁止使用外部 CQL runtime 套件（僅 stub，清楚標記 TODO）
+- Troponin 門檻值透過環境變數 TROPONIN_UPPER_LIMIT 設定（預設 0.04）
+- 冷卻視窗透過 CDS_COOLDOWN_MINUTES 設定（預設 15 分鐘）
+- 每個 .ts 檔案頂端 MUST 有模組說明 JSDoc 註解，說明用途與對應規則
+- 卡片 summary / detail 等臨床文案保留繁體中文（依規格書原文）
+- 所有程式碼邏輯註解使用英文
+</constraints>
+
+<output_format>
+每個成品以「相對路徑標題 + 程式碼區塊」依序輸出。
+所有成品輸出完畢後，附上一份「上線前整合確認清單」（10 項），列出院方團隊在正式上線前 MUST 替換或驗證之項目（包含值集、Troponin 門檻、認證設定、ECG 結構化欄位等）。
+成品之間不需要散文說明，僅需路徑標題與程式碼區塊。
+總輸出 MUST 完整且可直接於 `pnpm install && pnpm build` 後執行。
+</output_format>

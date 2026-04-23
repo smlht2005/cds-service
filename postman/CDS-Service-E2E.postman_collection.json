@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "CDS Service — E2E（TC-HOOK / TC-PF / TC-ERR）",
-    "description": "對應 docs/E2E_Test_Plan.md 區塊 3～5。\n\n**變數**\n- `baseUrl`：CDS Service（預設 http://127.0.0.1:3000）\n- `patientIdCaseA`：eGFR < 60 案例（預設 patient-ckd-001）\n- `patientIdCaseB`：eGFR ≥ 60 或無複查（請改為院內實際 ID；預設 patient-ckd-001 時若資料仍 <60 則 warning 仍可能出現）\n- `patientIdMissingScenario`：TC-ERR-03 用不存在病患（預設 does-not-exist-000000）\n\n**前置**：HAPI FHIR 已啟動、`npm start`、`.env` 之 FHIR_BASE_URL 正確。錯誤路徑（TC-ERR-01～02）需依說明手動改環境後再送。",
+    "description": "對應 docs/E2E_Test_Plan.md 區塊 3～5。\n\n**變數**\n- `baseUrl`：CDS Service（預設 http://127.0.0.1:3000）\n- `emergencyBaseUrl`：急診獨立 CDS（預設 http://127.0.0.1:3001；`npm run start:emergency`）\n- `patientIdCaseA`：eGFR < 60 案例（預設 patient-ckd-001）\n- `patientIdCaseB`：eGFR ≥ 60 或無複查（請改為院內實際 ID；預設 patient-ckd-001 時若資料仍 <60 則 warning 仍可能出現）\n- `patientIdMissingScenario`：TC-ERR-03 用不存在病患（預設 does-not-exist-000000）\n\n**前置**：HAPI FHIR 已啟動、`npm start`、`.env` 之 FHIR_BASE_URL 正確。錯誤路徑（TC-ERR-01～02）需依說明手動改環境後再送。",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "event": [
@@ -33,6 +33,7 @@
   ],
   "variable": [
     { "key": "baseUrl", "value": "http://127.0.0.1:3000" },
+    { "key": "emergencyBaseUrl", "value": "http://127.0.0.1:3001" },
     { "key": "patientIdCaseA", "value": "patient-ckd-001" },
     { "key": "patientIdCaseB", "value": "patient-healthy-egfr-001" },
     { "key": "patientIdNonExistent", "value": "does-not-exist-000000" },
@@ -263,6 +264,56 @@
             },
             "url": "{{baseUrl}}/cds-services/egfr-check",
             "description": "預期：FHIR 回 404 等 → CDS 可能 **502** 或錯誤訊息（依 fhirClient）。記錄實際 diagnostics。"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "TC-EMERGENCY（急診獨立 CDS）",
+      "description": "需另啟 `npm run start:emergency`（預設 port 3001）。使用變數 `emergencyBaseUrl`。",
+      "item": [
+        {
+          "name": "TC-EMERGENCY-01 GET discovery",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": "{{emergencyBaseUrl}}/cds-services",
+            "description": "預期：HTTP 200，`services` 含 `72hr-revisit` 與 `infection-control-warning`。"
+          },
+          "response": []
+        },
+        {
+          "name": "TC-EMERGENCY-02 POST 72hr-revisit（hybrid）",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json; charset=utf-8" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"hook\": \"patient-view\",\n  \"context\": {\n    \"patientId\": \"{{patientIdCaseA}}\"\n  }\n}"
+            },
+            "url": "{{emergencyBaseUrl}}/cds-services/72hr-revisit",
+            "description": "無 prefetch 時由伺服端查 Encounter。依測資可能為 info 或 warning。"
+          },
+          "response": []
+        },
+        {
+          "name": "TC-EMERGENCY-03 POST infection-control-warning（hybrid）",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json; charset=utf-8" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"hook\": \"patient-view\",\n  \"context\": {\n    \"patientId\": \"{{patientIdCaseA}}\"\n  }\n}"
+            },
+            "url": "{{emergencyBaseUrl}}/cds-services/infection-control-warning",
+            "description": "無 prefetch 時查 Flag／MedicationStatement／Condition。依測資可能為 info 或 warning。"
           },
           "response": []
         }

@@ -1,0 +1,54 @@
+{
+  "resourceType": "Bundle",
+  "type": "transaction",
+  "entry": [
+    {
+      "fullUrl": "urn:uuid:enc-ckd001-revisit-1",
+      "resource": {
+        "resourceType": "Encounter",
+        "id": "enc-ckd001-revisit-1",
+        "status": "finished",
+        "class": {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+          "code": "EMER",
+          "display": "emergency"
+        },
+        "subject": {
+          "reference": "Patient/patient-ckd-001"
+        },
+        "period": {
+          "start": "2026-04-19T08:00:00.000Z",
+          "end": "2026-04-19T10:00:00.000Z"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Encounter/enc-ckd001-revisit-1"
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:enc-ckd001-revisit-2",
+      "resource": {
+        "resourceType": "Encounter",
+        "id": "enc-ckd001-revisit-2",
+        "status": "finished",
+        "class": {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+          "code": "EMER",
+          "display": "emergency"
+        },
+        "subject": {
+          "reference": "Patient/patient-ckd-001"
+        },
+        "period": {
+          "start": "2026-04-19T18:00:00.000Z",
+          "end": "2026-04-19T20:00:00.000Z"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Encounter/enc-ckd001-revisit-2"
+      }
+    }
+  ]
+}

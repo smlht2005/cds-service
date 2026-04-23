@@ -1,0 +1,39 @@
+{
+  "resourceType": "Bundle",
+  "type": "transaction",
+  "entry": [
+    {
+      "fullUrl": "urn:uuid:patient-tb-002",
+      "resource": {
+        "resourceType": "Patient",
+        "id": "patient-tb-002",
+        "name": [ { "family": "結核測試", "given": ["二線無診斷"] } ],
+        "gender": "female",
+        "birthDate": "1985-10-10"
+      },
+      "request": { "method": "PUT", "url": "Patient/patient-tb-002" }
+    },
+    {
+      "fullUrl": "urn:uuid:mr-tb002-levofloxacin",
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "mr-tb002-levofloxacin",
+        "status": "active",
+        "intent": "order",
+        "medicationCodeableConcept": {
+          "coding": [
+            {
+              "system": "https://twcore.nsysu.edu.tw/ig/twcore/CodeSystem/medication-nhi-tw",
+              "code": "B024345100",
+              "display": "Levofloxacin"
+            }
+          ],
+          "text": "二線結核藥物（非 TB 適應症）"
+        },
+        "subject": { "reference": "Patient/patient-tb-002" },
+        "authoredOn": "2026-04-10T08:00:00.000Z"
+      },
+      "request": { "method": "PUT", "url": "MedicationRequest/mr-tb002-levofloxacin" }
+    }
+  ]
+}

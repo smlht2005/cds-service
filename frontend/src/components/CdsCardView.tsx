@@ -1,4 +1,12 @@
 /*
+ * 更新時間：2026-04-20 17:32
+ * 作者：CDS Service
+ * 摘要：急診卡片隱藏 source（不顯示 Emergency CDS），避免 UI 雜訊
+ *
+ * 更新時間：2026-04-20 17:18
+ * 作者：CDS Service
+ * 摘要：卡片 source.url 僅在主 CDS（egfr/ckd）顯示為可點連結；急診卡片僅顯示 label（避免 UI 誤導）
+ *
  * 更新時間：2026-04-16 10:05
  * 作者：CDS Service
  * 摘要：CDS Hook 回傳卡片 — 左側語意色條、階層與連結無障礙
@@ -6,8 +14,8 @@
 import { Box, Chip, Link, Paper, Typography } from '@mui/material';
 import type { CdsCard } from '../types/cdsHooks';
 
-export function CdsCardView(props: { card: CdsCard }) {
-  const { card } = props;
+export function CdsCardView(props: { card: CdsCard; allowSourceLink?: boolean; showSource?: boolean }) {
+  const { card, allowSourceLink = false, showSource = true } = props;
   const indicator = card.indicator ?? 'info';
   const title = card.summary ?? '(no summary)';
   const detail = card.detail ?? '';
@@ -42,9 +50,9 @@ export function CdsCardView(props: { card: CdsCard }) {
         </Typography>
       </Box>
 
-      {card.source?.label ? (
+      {showSource && card.source?.label ? (
         <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-          {card.source.url ? (
+          {allowSourceLink && card.source.url ? (
             <Link href={card.source.url} target="_blank" rel="noreferrer" underline="hover">
               {card.source.label}
             </Link>

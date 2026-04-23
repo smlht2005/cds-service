@@ -50,11 +50,23 @@ import {
 import { buildCkdRiskCards } from './ckdRiskCardBuilder.js';
 import { extractBundleResources, stripPatientPrefix, getUseElm, formatError } from './utils.js';
 
+/** CDS Hooks prefetch bundle：列出常用 FHIR resource key，其餘透過 index signature 容納 */
+export interface CdsHooksPrefetch {
+  patient?: unknown;
+  conditions?: unknown;
+  observations?: unknown;
+  medicationRequests?: unknown;
+  medicationStatements?: unknown;
+  flags?: unknown;
+  encounters?: unknown;
+  [key: string]: unknown;
+}
+
 /** CDS Hooks 請求（精簡，僅處理本 hook 所需欄位） */
 export interface CdsHooksRequest {
   hook?: string;
   context?: { patientId?: string };
-  prefetch?: Record<string, unknown>;
+  prefetch?: CdsHooksPrefetch;
 }
 
 /** CDS Hooks Card（精簡；可含 links） */

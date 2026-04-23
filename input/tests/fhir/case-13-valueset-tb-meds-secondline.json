@@ -1,0 +1,26 @@
+{
+  "resourceType": "ValueSet",
+  "id": "hosp-tb-meds-secondline",
+  "url": "https://fhir.your-hosp.org.tw/ValueSet/tb-meds-secondline",
+  "version": "2.1",
+  "name": "HospTBMedsSecondLine",
+  "title": "院內結核二線藥物值集",
+  "status": "active",
+  "description": "根據疾管署 TB 工作說明書 V2.1 彙整之二線抗結核藥物，須搭配 TB 診斷同時判定。",
+  "compose": {
+    "include": [
+      {
+        "system": "https://twcore.nsysu.edu.tw/ig/twcore/CodeSystem/medication-nhi-tw",
+        "concept": [
+          { "code": "B024345100", "display": "Levofloxacin (如: 樂伏沙錠)" },
+          { "code": "KC00868100", "display": "Moxifloxacin (如: 莫庫沙錠)" },
+          { "code": "BC26829100", "display": "Bedaquiline (如: 希若妥錠)" },
+          { "code": "BC27113100", "display": "Delamanid (如: 德拉馬尼錠)" },
+          { "code": "AA44321100", "display": "Amikacin (如: 艾米卡星注射液)" },
+          { "code": "BC24619100", "display": "Linezolid (如: 瑞諾得)" },
+          { "code": "AC32342100", "display": "Cycloserine (如: 賽克羅塞林)" }
+        ]
+      }
+    ]
+  }
+}

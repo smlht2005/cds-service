@@ -1,0 +1,39 @@
+嚴重
+1.完全缺少 CQL → ELM 編譯步驟
+CQL（Clinical Quality Language）是人可讀的語言，機器實際執行的是 ELM（Expression Logical Model，XML 或 JSON 格式）。目前計畫的 5 個 CQL Library 只是「紙上設計」，Phase 3 的 ruleEngine.ts stub 實際上是在 TypeScript 重新實作相同邏輯，CQL 根本沒被執行。這造成兩套平行邏輯並存，上線後誰是「單一真相來源」無法確定。
+
+✦ 建議：在 Phase 0 加入 CQL → ELM 編譯流程。
+使用 cql-to-elm translator（Java CLI 或 Docker image），將 5 個 .cql 檔編譯為 ELM JSON，版控於 src/cql/elm/ 目錄下，作為 ruleEngine 的真正輸入來源。
+
+
+
+2.CQL_ENGINE_URL 整合合約完全未定義
+Phase 3 描述「若 CQL_ENGINE_URL 已設定則呼叫外部 CQL 引擎」，但完全沒有定義：request body 格式為何？使用 CQF Ruler、HAPI FHIR + CQL plugin 還是其他引擎？response 結構如何解析？這個 TODO 空洞會讓後繼工程師無法實作。
+
+✦ 建議：明確指定引擎為 CQF Ruler（GET /cql/evaluate 或 POST /$evaluate-measure），並定義 request schema（libraryUrl、expression、parameters、data bundles）與 response 解析邏輯。
+
+
+3.缺少 Phase 0：開發環境與 CQL 測試基礎設施
+目前 Phase 1 直接進入 TypeScript 開發，但缺乏：本地 FHIR 沙箱（HAPI FHIR）、CQL 編譯環境、CQL 語法驗證、ELM 單元測試框架（cql-testing-framework）。沒有這個基礎，CQL Library 設計無法被驗證。
+
+✦ 建議：新增 Phase 0，使用 docker-compose 啟動 HAPI FHIR Server + CQF Ruler，加入 cql/ 目錄與 Makefile 指令：make compile-cql 觸發 cql-to-elm 編譯，make test-cql 執行 CQL 規則的臨床邏輯測試。
+
+
+主要
+
+1.CQL Library 相依性在執行時未處理
+ChestPainScreenLogic 依賴 ACSCommonLogic，ACSWorkupCompletenessLogic 依賴 ChestPainScreenLogic。在 ELM 執行環境中，這些 Library 需要分別以 ELM JSON artifact 形式傳入引擎，並在執行時解析依賴。目前計畫完全沒有定義 Library 依賴解析策略。
+
+✦ 建議：在 src/cql/elm/ 目錄定義 library manifest，列出每個 ELM artifact 與其依賴，ruleEngine 呼叫引擎時一次傳入整個 Library bundle。
+
+
+
+以下是最重要的 3 點補充說明：
+關於 CQL 是否應轉換為 ELM — 答案是肯定的，而且是架構成敗的關鍵。 目前計畫讓 TypeScript stub 函式重新實作 CQL 邏輯，等同於有兩套規則並存，臨床知識的「單一真相來源」不明確。正確做法是：CQL 是醫師可讀的規則定義，ELM JSON 是機器執行的產物，兩者之間需要一個明確的編譯步驟（cql-to-elm translator），建議在 Phase 0 就建立這條流水線。
+最高優先修正順序建議：
+
+1.新增 Phase 0（CQL 編譯環境 + FHIR 沙箱）
+2.補齊 feedback endpoint（<code>/cds-services/{id}/feedback</code>）— 否則稽核需求永遠無法達成
+3.加入 Encounter 到所有 prefetch 查詢 — 否則 ACS 規則會被舊病史誤觸發
+4.定義 CQL_ENGINE_URL 的 API 合約（建議指定 CQF Ruler）
+5.修正 Bearer Token timing attack 漏洞

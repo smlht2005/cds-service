@@ -1,4 +1,36 @@
 /*
+ * 更新時間：2026-04-22 10:58
+ * 作者：CDS Service
+ * 摘要：Phase 4 — 支援 tb-detection：
+ *       1. supportsPrefetchFromFhir 納入 tb-detection；
+ *       2. 前端 Prefetch 組裝（Patient/Condition/MedicationRequest/MedicationStatement/Flag/Observation）；
+ *       3. Tooltip 文案延伸至 tb-detection；
+ *       4. patientId 輸入旁掛載 tb-detection 測試病患快選 chips。
+ *
+ * 更新時間：2026-04-20 17:58
+ * 作者：CDS Service
+ * 摘要：UI 文案 tooltip 採安全索引存取（避免 TT 型別快取導致誤判）；不影響實際行為
+ *
+ * 更新時間：2026-04-20 17:55
+ * 作者：CDS Service
+ * 摘要：mixed hooks 表單化 builder：observation-create / order-select（取代非 patient-view 的最小 Context JSON 輸入）
+ *
+ * 更新時間：2026-04-20 17:18
+ * 作者：CDS Service
+ * 摘要：急診服務支援前端 Prefetch from FHIR：72hr-revisit（patient+recentEncounters）、infection-control-warning（patient+flags+medicationStatements+conditions）
+ *
+ * 更新時間：2026-04-20 16:55
+ * 作者：CDS Service
+ * 摘要：Prefetch 開關對齊實作範圍：非 egfr/ckd 服務停用並提示（避免誤以為會帶入 patient/prefetch）
+ *
+ * 更新時間：2026-04-20 16:18
+ * 作者：CDS Service
+ * 摘要：前端 Patient 下拉清單對齊急診測試資料（patient-ckd-001、patient-ckd-002）
+ *
+ * 更新時間：2026-04-20 15:41
+ * 作者：CDS Service
+ * 摘要：前端 UI 重構：服務清單改為 Discovery 動態載入；新增主/急診 target 切換；支援 mixed hooks（最小 context JSON 輸入）
+ *
  * 更新時間：2026-04-16 15:21
  * 作者：CDS Service
  * 摘要：Patient 下拉清單新增 patient-ckd-107（用於驗證 ckd-risk 家族史/AKI warning）
@@ -56,6 +88,21 @@ import type { CdsCard, CdsHookRequest, CdsHookResponse, OperationOutcome } from 
 import { CdsCardView } from './components/CdsCardView';
 import { JsonBlock } from './components/JsonBlock';
 import { APP_DESCRIPTION, APP_SUBTITLE, APP_TITLE, TT } from './copy/zhTwUi';
+import { getDiscoveryServices, getServiceLabel } from './cds/discovery';
+import { CDS_TARGETS } from './cds/targets';
+import type { CdsTargetId, DiscoveryService } from './cds/types';
+import {
+  createObservationCreateBuilderState,
+  createOrderSelectBuilderState,
+  OBSERVATION_CREATE_HOOK,
+  ORDER_SELECT_HOOK,
+  parseObservationCreateContext,
+  parseOrderSelectContext,
+  renderObservationCreateBuilder,
+  renderOrderSelectBuilder,
+  renderTbDetectionQuickPresets,
+  TB_DETECTION_SERVICE_ID,
+} from './cds/hookBuilders';
 
 /** Tooltip 較長中文說明時限制寬度、提升可讀性 */
 const tooltipSlotProps = {
@@ -94,8 +141,6 @@ function formatFhirError(e: unknown): string {
   }
   return String(e);
 }
-
-type ServiceId = 'egfr-check' | 'ckd-risk' | 'ckd-comprehensive';
 
 function getRuleEngine(cards: CdsCard[]): string | undefined {
   const ext = cards?.[0]?.extension?.find((e) => e.url === 'urn:cds-service:rule-engine');
@@ -137,21 +182,63 @@ function EmptyCardsPlaceholder(props: { message: string }) {
 export default function App() {
   const patientOptions = useMemo(
     () => [
+      'patient-ckd-001',
+      'patient-ckd-002',
       'patient-ckd-101',
       'patient-ckd-102',
       'patient-ckd-103',
       'patient-ckd-104',
       'patient-ckd-105',
       'patient-ckd-107',
+      // TB detection 測試病患（case-14 ~ case-28）
+      'patient-tb-001',
+      'patient-tb-002',
+      'patient-tb-003',
+      'patient-tb-004',
+      'patient-tb-005',
+      'patient-tb-006',
+      'patient-tb-007',
+      'patient-tb-008',
+      'patient-tb-009',
+      'patient-tb-010',
+      'patient-tb-011',
+      'patient-tb-012',
+      'patient-tb-013',
+      'patient-tb-014',
+      'patient-tb-015',
     ],
     [],
   );
 
-  const [serviceId, setServiceId] = useState<ServiceId>('egfr-check');
-  const [patientId, setPatientId] = useState<string>(patientOptions[0] ?? '');
+  const [cdsTargetId, setCdsTargetId] = useState<CdsTargetId>('main');
+  const cdsTarget = CDS_TARGETS.find((t) => t.id === cdsTargetId) ?? CDS_TARGETS[0];
+
+  const [serviceId, setServiceId] = useState<string>('');
+  const [selectedService, setSelectedService] = useState<DiscoveryService | null>(null);
+  const initialPatientId = patientOptions[0] ?? '';
+  const [patientId, setPatientId] = useState<string>(initialPatientId);
   const [autoStart, setAutoStart] = useState<boolean>(true);
   const [useEgfrPrefetchFromFhir, setUseEgfrPrefetchFromFhir] = useState<boolean>(false);
   const [useCkdPrefetchFromFhir, setUseCkdPrefetchFromFhir] = useState<boolean>(true);
+  const [hookContextJsonText, setHookContextJsonText] = useState<string>('{}');
+  const [hookContextJsonError, setHookContextJsonError] = useState<string | null>(null);
+
+  const [observationCreateBuilderState, setObservationCreateBuilderState] = useState(() =>
+    createObservationCreateBuilderState(initialPatientId),
+  );
+  const [orderSelectBuilderState, setOrderSelectBuilderState] = useState(() => createOrderSelectBuilderState(initialPatientId));
+
+  const uiCopy = TT as Record<string, string>;
+
+  const hookType = (selectedService?.hook && typeof selectedService.hook === 'string' ? selectedService.hook : 'patient-view') as string;
+  const supportsPrefetchFromFhir =
+    hookType === 'patient-view' &&
+    (serviceId === 'egfr-check' ||
+      serviceId === 'ckd-risk' ||
+      serviceId === 'ckd-comprehensive' ||
+      serviceId === '72hr-revisit' ||
+      serviceId === 'infection-control-warning' ||
+      serviceId === TB_DETECTION_SERVICE_ID);
 
   const prefetchFromFhirEnabled = serviceId === 'egfr-check' ? useEgfrPrefetchFromFhir : useCkdPrefetchFromFhir;
   const setPrefetchFromFhirEnabled = (v: boolean) => {
@@ -175,29 +262,80 @@ export default function App() {
     setLoadingDiscovery(true);
     setError(null);
     try {
-      const json = await fetchDiscovery({ basePath: '' });
+      const json = await fetchDiscovery({ basePath: cdsTarget.basePath });
       setDiscoveryJson(json);
+      const services = getDiscoveryServices(json);
+      const next =
+        services.find((s) => typeof s.id === 'string' && s.id === serviceId) ??
+        services.find((s) => typeof s.id === 'string') ??
+        null;
+      const nextId = typeof next?.id === 'string' ? next.id : '';
+      setSelectedService(next);
+      setServiceId(nextId);
     } catch (e) {
       const msg = e && typeof e === 'object' && 'message' in (e as any) ? String((e as any).message) : String(e);
       setError(`Discovery failed: ${msg}`);
       setDiscoveryJson(null);
+      setSelectedService(null);
+      setServiceId('');
     } finally {
       setLoadingDiscovery(false);
     }
   }
 
   async function runHook() {
-    if (!patientId) return;
+    if (!serviceId) return;
     setLoadingHook(true);
     setError(null);
 
+    const hook = hookType;
+    let extraContext: Record<string, unknown> = {};
+    if (hook !== 'patient-view') {
+      if (hook === OBSERVATION_CREATE_HOOK) {
+        const parsed = parseObservationCreateContext(observationCreateBuilderState, patientId);
+        if (parsed.error) {
+          setObservationCreateBuilderState((s) => ({ ...s, contextJsonError: parsed.error }));
+          setLoadingHook(false);
+          return;
+        }
+        extraContext = parsed.context;
+      } else if (hook === ORDER_SELECT_HOOK) {
+        const parsed = parseOrderSelectContext(orderSelectBuilderState, patientId);
+        if (parsed.error) {
+          setOrderSelectBuilderState((s) => ({ ...s, contextJsonError: parsed.error }));
+          setLoadingHook(false);
+          return;
+        }
+        extraContext = parsed.context;
+      } else {
+        try {
+          const parsed = JSON.parse(hookContextJsonText || '{}') as unknown;
+          if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+            extraContext = parsed as Record<string, unknown>;
+            setHookContextJsonError(null);
+          } else {
+            setHookContextJsonError('context JSON 必須是物件（object）');
+            setLoadingHook(false);
+            return;
+          }
+        } catch (e) {
+          setHookContextJsonError(`context JSON 解析失敗：${String(e)}`);
+          setLoadingHook(false);
+          return;
+        }
+      }
+    } else {
+      setHookContextJsonError(null);
+    }
+
     const req: CdsHookRequest = {
-      hook: 'patient-view',
-      context: { patientId },
+      hook,
+      context: { ...(patientId ? { patientId } : {}), ...extraContext },
     };
 
     try {
-      if ((serviceId === 'ckd-risk' || serviceId === 'ckd-comprehensive') && prefetchFromFhirEnabled) {
+      // 目前前端 prefetch 組裝僅針對既有 CKD/egfr 三支 patient-view 服務提供（其他 hook 以後端 hybrid 為主）
+      if ((serviceId === 'ckd-risk' || serviceId === 'ckd-comprehensive') && prefetchFromFhirEnabled && supportsPrefetchFromFhir) {
         const patient = await fhirGet(`Patient/${encodeURIComponent(patientId)}`);
         const conditions = await fhirSearch(
           'Condition',
@@ -254,7 +392,7 @@ export default function App() {
             ? { latestEgfr: bundleFromResources(latestEgfr) }
             : {}),
         };
-      } else if (serviceId === 'egfr-check' && prefetchFromFhirEnabled) {
+      } else if (serviceId === 'egfr-check' && prefetchFromFhirEnabled && supportsPrefetchFromFhir) {
         const patient = await fhirGet(`Patient/${encodeURIComponent(patientId)}`);
         const egfrObs = await fhirSearch(
           'Observation',
@@ -269,6 +407,67 @@ export default function App() {
           latestEgfr: bundleFromResources(egfrObs),
           latestCreatinine: bundleFromResources(creaObs),
         };
+      } else if (serviceId === '72hr-revisit' && prefetchFromFhirEnabled && supportsPrefetchFromFhir) {
+        const patient = await fhirGet(`Patient/${encodeURIComponent(patientId)}`);
+        const encounters = await fhirSearch(
+          'Encounter',
+          `patient=${encodeURIComponent(patientId)}&_sort=-date&_count=30`,
+        );
+        req.prefetch = {
+          patient,
+          recentEncounters: bundleFromResources(encounters),
+        };
+      } else if (serviceId === 'infection-control-warning' && prefetchFromFhirEnabled && supportsPrefetchFromFhir) {
+        const patient = await fhirGet(`Patient/${encodeURIComponent(patientId)}`);
+        const flags = await fhirSearch('Flag', `patient=${encodeURIComponent(patientId)}&_count=50`);
+        const medicationStatements = await fhirSearch(
+          'MedicationStatement',
+          `patient=${encodeURIComponent(patientId)}&_count=50`,
+        );
+        const conditions = await fhirSearch(
+          'Condition',
+          `patient=${encodeURIComponent(patientId)}&clinical-status=active`,
+        );
+        req.prefetch = {
+          patient,
+          flags: bundleFromResources(flags),
+          medicationStatements: bundleFromResources(medicationStatements),
+          conditions: bundleFromResources(conditions),
+        };
+      } else if (
+        serviceId === TB_DETECTION_SERVICE_ID &&
+        prefetchFromFhirEnabled &&
+        supportsPrefetchFromFhir
+      ) {
+        const patient = await fhirGet(`Patient/${encodeURIComponent(patientId)}`);
+        const conditions = await fhirSearch(
+          'Condition',
+          `patient=${encodeURIComponent(patientId)}&_count=200`,
+        );
+        const medicationRequests = await fhirSearch(
+          'MedicationRequest',
+          `patient=${encodeURIComponent(patientId)}&_count=200`,
+        );
+        const medicationStatements = await fhirSearch(
+          'MedicationStatement',
+          `patient=${encodeURIComponent(patientId)}&_count=200`,
+        );
+        const flags = await fhirSearch(
+          'Flag',
+          `patient=${encodeURIComponent(patientId)}&_count=50`,
+        );
+        const observations = await fhirSearch(
+          'Observation',
+          `patient=${encodeURIComponent(patientId)}&_sort=-date&_count=200`,
+        );
+        req.prefetch = {
+          patient,
+          conditions: bundleFromResources(conditions),
+          medicationRequests: bundleFromResources(medicationRequests),
+          medicationStatements: bundleFromResources(medicationStatements),
+          flags: bundleFromResources(flags),
+          observations: bundleFromResources(observations),
+        };
       }
     } catch (e) {
       setError(`Prefetch / FHIR failed:\n${formatFhirError(e)}`);
@@ -281,7 +480,7 @@ export default function App() {
     setHookReqJson(req);
 
     try {
-      const { response, rawJson } = await callHook(serviceId, req, { basePath: '' });
+      const { response, rawJson } = await callHook(serviceId, req, { basePath: cdsTarget.basePath });
       setHookRes(response);
       setHookRawJson(rawJson);
     } catch (e) {
@@ -311,14 +510,16 @@ export default function App() {
 
   useEffect(() => {
     void loadDiscovery();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cdsTargetId]);
 
   useEffect(() => {
     if (!autoStart) return;
-    if (!patientId) return;
+    if (!serviceId) return;
+    if (hookType === 'patient-view' && !patientId) return;
     void runHook();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [patientId, serviceId, autoStart, useEgfrPrefetchFromFhir, useCkdPrefetchFromFhir]);
+  }, [patientId, serviceId, cdsTargetId, autoStart, useEgfrPrefetchFromFhir, useCkdPrefetchFromFhir, hookContextJsonText]);
 
   const infoCards = hookRes?.cards?.filter((c) => (c.indicator ?? 'info') === 'info') ?? [];
   const warningCards =
@@ -427,6 +628,25 @@ export default function App() {
               </Stack>
               <Grid container spacing={2}>
                 <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                  <Tooltip title={TT.cdsTarget} arrow placement="top" slotProps={tooltipSlotProps}>
+                    <FormControl fullWidth size="small">
+                      <InputLabel id="target-label">CDS 目標</InputLabel>
+                      <Select
+                        labelId="target-label"
+                        label="CDS 目標"
+                        value={cdsTargetId}
+                        onChange={(e) => setCdsTargetId(e.target.value as CdsTargetId)}
+                      >
+                        {CDS_TARGETS.map((t) => (
+                          <MenuItem key={t.id} value={t.id}>
+                            {t.label}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Tooltip>
+                </Grid>
+                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                   <Tooltip title={TT.cdsService} arrow placement="top" slotProps={tooltipSlotProps}>
                     <FormControl fullWidth size="small">
                       <InputLabel id="service-label">CDS 服務</InputLabel>
@@ -434,11 +654,22 @@ export default function App() {
                         labelId="service-label"
                         label="CDS 服務"
                         value={serviceId}
-                        onChange={(e) => setServiceId(e.target.value as ServiceId)}
+                        onChange={(e) => {
+                          const v = String(e.target.value ?? '');
+                          setServiceId(v);
+                          const services = getDiscoveryServices(discoveryJson);
+                          const svc = services.find((s) => s.id === v) ?? null;
+                          setSelectedService(svc);
+                        }}
                       >
-                        <MenuItem value="egfr-check">egfr-check</MenuItem>
-                        <MenuItem value="ckd-risk">ckd-risk</MenuItem>
-                        <MenuItem value="ckd-comprehensive">ckd-comprehensive</MenuItem>
+                        {getDiscoveryServices(discoveryJson).map((s, idx) => {
+                          const id = typeof s.id === 'string' ? s.id : `svc-${idx}`;
+                          return (
+                            <MenuItem key={id} value={typeof s.id === 'string' ? s.id : ''} disabled={typeof s.id !== 'string'}>
+                              {getServiceLabel(s)}
+                            </MenuItem>
+                          );
+                        })}
                       </Select>
                     </FormControl>
                   </Tooltip>
@@ -447,7 +678,11 @@ export default function App() {
                       ? TT.serviceExplainEgfr
                       : serviceId === 'ckd-risk'
                         ? TT.serviceExplainCkd
-                        : TT.serviceExplainCkdComprehensive}
+                        : serviceId === 'ckd-comprehensive'
+                          ? TT.serviceExplainCkdComprehensive
+                          : selectedService?.description
+                            ? String(selectedService.description)
+                            : `hook: ${String(selectedService?.hook ?? 'unknown')}`}
                   </Typography>
                 </Grid>
                 <Grid size={{ xs: 12, sm: 6, md: 4 }}>
@@ -477,6 +712,9 @@ export default function App() {
                       />
                     </Box>
                   </Tooltip>
+                  {serviceId === TB_DETECTION_SERVICE_ID
+                    ? renderTbDetectionQuickPresets({ patientId, setPatientId })
+                    : null}
                 </Grid>
                 <Grid size={{ xs: 12, md: 5 }}>
                   <Stack spacing={1}>
@@ -495,7 +733,17 @@ export default function App() {
                       </span>
                     </Tooltip>
                     <Tooltip
-                      title={serviceId === 'egfr-check' ? TT.prefetchEgfr : TT.prefetchCkd}
+                      title={
+                        supportsPrefetchFromFhir
+                          ? serviceId === 'egfr-check'
+                            ? TT.prefetchEgfr
+                            : serviceId === '72hr-revisit' ||
+                                serviceId === 'infection-control-warning' ||
+                                serviceId === TB_DETECTION_SERVICE_ID
+                              ? TT.prefetchEmergency
+                              : TT.prefetchCkd
+                          : TT.prefetchUnsupported
+                      }
                       arrow
                       placement="left"
                       slotProps={tooltipSlotProps}
@@ -507,6 +755,7 @@ export default function App() {
                               checked={prefetchFromFhirEnabled}
                               onChange={(e) => setPrefetchFromFhirEnabled(e.target.checked)}
                               slotProps={{ input: { 'aria-label': '是否由前端先向 FHIR 組 prefetch' } }}
+                              disabled={!supportsPrefetchFromFhir}
                             />
                           }
                           label={`Prefetch from FHIR（${serviceId}）`}
@@ -516,6 +765,58 @@ export default function App() {
                   </Stack>
                 </Grid>
               </Grid>
+
+              {(selectedService?.hook ?? 'patient-view') !== 'patient-view' ? (
+                hookType === OBSERVATION_CREATE_HOOK ? (
+                  <Tooltip
+                    title={uiCopy['hookContextObservationCreate'] ?? TT.hookContextJson}
+                    arrow
+                    placement="top"
+                    slotProps={tooltipSlotProps}
+                  >
+                    <Box>
+                      {renderObservationCreateBuilder({
+                        patientId,
+                        state: observationCreateBuilderState,
+                        setState: setObservationCreateBuilderState,
+                        tooltipTitle: uiCopy['hookContextObservationCreate'] ?? TT.hookContextJson,
+                      })}
+                    </Box>
+                  </Tooltip>
+                ) : hookType === ORDER_SELECT_HOOK ? (
+                  <Tooltip
+                    title={uiCopy['hookContextOrderSelect'] ?? TT.hookContextJson}
+                    arrow
+                    placement="top"
+                    slotProps={tooltipSlotProps}
+                  >
+                    <Box>
+                      {renderOrderSelectBuilder({
+                        patientId,
+                        state: orderSelectBuilderState,
+                        setState: setOrderSelectBuilderState,
+                        tooltipTitle: uiCopy['hookContextOrderSelect'] ?? TT.hookContextJson,
+                      })}
+                    </Box>
+                  </Tooltip>
+                ) : (
+                  <Box sx={{ mt: 2 }}>
+                    <Tooltip title={TT.hookContextJson} arrow placement="top" slotProps={tooltipSlotProps}>
+                      <TextField
+                        fullWidth
+                        size="small"
+                        multiline
+                        minRows={4}
+                        label={`Context JSON（${String(selectedService?.hook ?? 'unknown')}）`}
+                        value={hookContextJsonText}
+                        onChange={(e) => setHookContextJsonText(e.target.value)}
+                        error={Boolean(hookContextJsonError)}
+                        helperText={hookContextJsonError ?? '（最小可用：{}）'}
+                      />
+                    </Tooltip>
+                  </Box>
+                )
+              ) : null}
 
               {serviceId === 'egfr-check' && prefetchFromFhirEnabled ? (
                 <Tooltip title={TT.discoveryKeysChip} arrow placement="top" slotProps={tooltipSlotProps}>
@@ -588,7 +889,7 @@ export default function App() {
                       sx={{ minWidth: { sm: 200 } }}
                       startIcon={loadingHook ? <CircularProgress size={18} color="inherit" /> : <PlayArrowIcon />}
                       onClick={() => void runHook()}
-                      disabled={loadingHook || !patientId}
+                      disabled={loadingHook || !serviceId || ((selectedService?.hook ?? 'patient-view') === 'patient-view' && !patientId)}
                       aria-busy={loadingHook}
                     >
                       立即呼叫 Hook
@@ -612,7 +913,7 @@ export default function App() {
                   <Paper variant="outlined" sx={{ p: { xs: 2, sm: 2.5 }, borderRadius: 2 }}>
                     <Stack direction="row" spacing={0.5} sx={{ mb: 1.5, alignItems: 'center' }}>
                       <Typography variant="subtitle1" component="h2" sx={{ fontWeight: 700 }}>
-                        請求本文（patient-view）
+                        請求本文（{hookType}）
                       </Typography>
                       <Tooltip title={TT.sectionRequestBody} arrow placement="right" slotProps={tooltipSlotProps}>
                         <IconButton size="small" aria-label="請求本文說明" sx={{ p: 0.25 }}>
@@ -673,7 +974,14 @@ export default function App() {
                     </Typography>
                     <Box sx={{ mt: 1.5, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                       {infoCards.length ? (
-                        infoCards.map((c, idx) => <CdsCardView key={c.uuid ?? `info-${idx}`} card={c} />)
+                        infoCards.map((c, idx) => (
+                          <CdsCardView
+                            key={c.uuid ?? `info-${idx}`}
+                            card={c}
+                            allowSourceLink={cdsTargetId === 'main'}
+                            showSource={cdsTargetId === 'main'}
+                          />
+                        ))
                       ) : (
                         <EmptyCardsPlaceholder message="尚無 info 卡片 — 請確認已呼叫 Hook 且後端有回傳。" />
                       )}
@@ -686,7 +994,14 @@ export default function App() {
                     </Typography>
                     <Box sx={{ mt: 1.5, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                       {warningCards.length ? (
-                        warningCards.map((c, idx) => <CdsCardView key={c.uuid ?? `warn-${idx}`} card={c} />)
+                        warningCards.map((c, idx) => (
+                          <CdsCardView
+                            key={c.uuid ?? `warn-${idx}`}
+                            card={c}
+                            allowSourceLink={cdsTargetId === 'main'}
+                            showSource={cdsTargetId === 'main'}
+                          />
+                        ))
                       ) : (
                         <EmptyCardsPlaceholder message="目前無警示卡片（規則未觸發或資料不足）。" />
                       )}

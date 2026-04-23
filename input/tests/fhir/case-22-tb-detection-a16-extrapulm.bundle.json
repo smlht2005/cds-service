@@ -1,0 +1,48 @@
+{
+  "resourceType": "Bundle",
+  "type": "transaction",
+  "entry": [
+    {
+      "fullUrl": "urn:uuid:patient-tb-022",
+      "resource": {
+        "resourceType": "Patient",
+        "id": "patient-tb-022",
+        "name": [ { "family": "結核測試", "given": ["A16肺外結核"] } ],
+        "gender": "male",
+        "birthDate": "1972-02-14"
+      },
+      "request": { "method": "PUT", "url": "Patient/patient-tb-022" }
+    },
+    {
+      "fullUrl": "urn:uuid:cond-tb022-a16",
+      "resource": {
+        "resourceType": "Condition",
+        "id": "cond-tb022-a16",
+        "clinicalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+              "code": "active"
+            }
+          ]
+        },
+        "verificationStatus": {
+          "coding": [
+            { "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status", "code": "confirmed" }
+          ]
+        },
+        "code": {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "A16",
+              "display": "Respiratory tuberculosis, not confirmed bacteriologically or histologically"
+            }
+          ]
+        },
+        "subject": { "reference": "Patient/patient-tb-022" }
+      },
+      "request": { "method": "PUT", "url": "Condition/cond-tb022-a16" }
+    }
+  ]
+}
